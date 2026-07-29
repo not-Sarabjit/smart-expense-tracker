@@ -1,3 +1,9 @@
 fastapi
-streamlit
+uvicorn[standard]
 sqlalchemy
+psycopg2-binary
+alembic
+pydantic-settings
+python-dotenv
+passlib[bcrypt]
+python-jose
