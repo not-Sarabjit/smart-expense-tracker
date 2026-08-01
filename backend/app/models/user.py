@@ -15,3 +15,4 @@ class User(Base):
     last_name = Column(String)
     hashed_password = Column(String, nullable=False)
     created_at = Column(Date,server_default = func.current_date())
+
