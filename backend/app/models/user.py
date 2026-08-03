@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, func
+from sqlalchemy import Column, Integer, String, DateTime, func
 from sqlalchemy.orm import relationship
 
 from app.database.base import Base
@@ -15,7 +15,7 @@ class User(Base):
     first_name = Column(String, nullable = False)
     last_name = Column(String)
     hashed_password = Column(String, nullable=False)
-    created_at = Column(Date,server_default = func.current_date())
+    created_at = Column(DateTime,server_default = func.now())
 
     # Relationship Definitions
 
