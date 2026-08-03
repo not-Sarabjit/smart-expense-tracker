@@ -3,6 +3,7 @@ from app.core.logging import setup_logging
 import logging
 
 
+
 ## Main setup for logging
 setup_logging()
 
@@ -17,4 +18,3 @@ app = FastAPI()
 @app.get('/health')
 def get_health():
     return {'status' : 'OK'}
-

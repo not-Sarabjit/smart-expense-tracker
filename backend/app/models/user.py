@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Date
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, Date, func
+from sqlalchemy.orm import relationship
+
 from app.database.base import Base
 
 # Table Definition for Users that will use the app
@@ -16,3 +17,18 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     created_at = Column(Date,server_default = func.current_date())
 
+    # Relationship Definitions
+
+    # With Transactions
+    transactions = relationship(
+        "Transaction",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    # With user created custom categories
+    custom_categories = relationship(
+        'Category',
+        back_populates='user',
+        cascade='all, delete-orphan'
+    )
