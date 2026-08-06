@@ -8,13 +8,13 @@ class Category(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    type = Column(Enum("expense", "income", name="category_type"), nullable=False)
+    category_type = Column(Enum("expense", "income", name="category_type"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id",ondelete='CASCADE'), nullable=True)  ## User ID to store custom categories made by users
     created_at = Column(Date, server_default=func.current_date())
 
     ## Unique values constraints so duplicate categories are not made
     __table_args__ = (
-        UniqueConstraint("user_id", "name", "type", name="uq_user_category_name_type"),
+        UniqueConstraint("user_id", "name", "category_type", name="uq_user_category_name_type"),
     )
 
     # Relationship Definition

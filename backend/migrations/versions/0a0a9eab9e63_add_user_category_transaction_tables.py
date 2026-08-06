@@ -35,12 +35,12 @@ def upgrade() -> None:
     op.create_table('categories',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
-    sa.Column('type', sa.Enum('expense', 'income', name='category_type'), nullable=False),
+    sa.Column('category_type', sa.Enum('expense', 'income', name='category_type'), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.Date(), server_default=sa.text('CURRENT_DATE'), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'name', 'type', name='uq_user_category_name_type')
+    sa.UniqueConstraint('user_id', 'name', 'category_type', name='uq_user_category_name_type')
     )
     op.create_table('transactions',
     sa.Column('id', sa.Integer(), nullable=False),

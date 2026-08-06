@@ -24,11 +24,11 @@ class CategoryRepository:
         statement = select(Category).where(Category.id == id)
         return self.db.scalars(statement).first()
 
-    def create(self, name: str, type: str, user_id: int) -> Category:
+    def create(self, name: str, category_type: str, user_id: int) -> Category:
         '''
-        Takes name, type and user id to create a new custom category for the user
+        Takes name, category_type and user id to create a new custom category for the user
         '''
-        category = Category(name = name, type = type, user_id = user_id)
+        category = Category(name = name, category_type = category_type, user_id = user_id)
         self.db.add(category)
         self.db.commit()
         self.db.refresh(category)

@@ -13,6 +13,9 @@ class UserRepository:
         return self.db.query(User).filter(User.email == email).first()
 
     def create(self, email: str, first_name: str, last_name: str, hashed_password: str) -> User:
+        '''
+        Creates a user object and returns it
+        '''
         user = User(
             email=email,
             first_name=first_name,

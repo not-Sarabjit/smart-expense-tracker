@@ -15,8 +15,9 @@ class TransactionRepository:
         category_id: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
-        skip: int = 0,
-        limit: int = 50,
+        sort_by: str = 'date',
+        sort_order: str = 'desc',
+        limit: int = 50
     ) -> list[Transaction]:
         '''
         Fetches transactions made by the user ( Default returned 50 most recent ), Using the user_id
@@ -33,7 +34,19 @@ class TransactionRepository:
         if end_date:
             statement = statement.where(Transaction.date <= end_date)
 
-        statement = statement.order_by(Transaction.date.desc()).offset(skip).limit(limit)
+        sort_columns = {
+            "date": Transaction.date,
+            "amount": Transaction.amount,
+        }
+
+        column = sort_columns[sort_by]
+
+        if sort_order == "asc":
+            statement = statement.order_by(column.asc())
+        else:
+            statement = statement.order_by(column.desc())
+
+        statement = statement.limit(limit)
 
         return self.db.scalars(statement).all()
 
@@ -51,7 +64,7 @@ class TransactionRepository:
         description: str,
         date: date,
         user_id: int,
-        category_id: int | None = None,
+        category_id: int | None = None
     ) -> Transaction:
         
         transaction = Transaction(
