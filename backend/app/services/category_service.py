@@ -16,6 +16,19 @@ class CategoryService:
         '''
         return self.category_repository.get_all_for_user(user_id)
 
+    def get_category(self, user_id: int, category_id: int) :
+        '''
+        Gets a category by category_id
+        '''
+        category = self.category_repository.get_by_id(category_id)
+
+        if not category:
+            raise ValueError('Category does not exist')
+
+        if category.user_id != None and category.user_id != user_id:
+            raise ValueError('Category does not exist for this user')
+
+        return category
 
     def create_category(self, user_id: int, name: str, category_type: str ) -> Category:
 
