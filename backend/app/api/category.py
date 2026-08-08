@@ -6,7 +6,7 @@ from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryOut, CategoryUpdate
 from app.services.category_service import CategoryService
 from app.repositories.category_repository import CategoryRepository
-#from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
 

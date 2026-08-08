@@ -14,26 +14,7 @@ from app.repositories.transaction_repository import TransactionRepository
 from app.repositories.category_repository import CategoryRepository
 
 from app.services.transaction_service import TransactionService
-
-# --- Auth dependency -------------------------------------------------------
-# Phase 7, Step 1 will build the real get_current_user (decodes JWT, loads
-# the user, raises 401 if invalid). Until that phase exists, import it if
-# present; otherwise fall back to a placeholder so this router still runs.
-try:
-    from app.dependencies.auth import get_current_user  # Phase 7, Step 1
-except ImportError:  # pragma: no cover - temporary stub until Phase 7
-    from app.models.user import User
-
-    def get_current_user(db: Session = Depends(get_db)) -> "User":
-        """
-        TEMPORARY placeholder until Phase 7 - Step 1 builds the real
-        JWT-based get_current_user dependency. Replace this import once
-        app/dependencies/auth.py exists.
-        """
-        raise NotImplementedError(
-            "get_current_user is not implemented yet - build it in Phase 7, Step 1."
-        )
-
+from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
