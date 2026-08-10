@@ -23,6 +23,9 @@ class AuthService:
         '''
         if self.user_repository.get_by_email(email):
             raise ValueError("Email already registered")
+        print(password)
+        print(type(password))
+        print(len(password))
         hashed_password = pwd_context.hash(password)
         return self.user_repository.create(
             email=email,

@@ -13,7 +13,7 @@ class TransactionService:
         self,
         user_id: int,
         amount: float,
-        type: str,         
+        transaction_type: str,         
         description: str,
         date: date,
         category_id: int
@@ -23,9 +23,9 @@ class TransactionService:
         if amount <= 0:
             raise ValueError('Amount must be positive')
 
-        # Type validation
-        if type not in ('income', 'expense'):
-            raise ValueError('Type must be income or expense')
+        # Transaction Type validation
+        if transaction_type not in ('income', 'expense'):
+            raise ValueError('Transaction Type must be income or expense')
 
         # Category Validation
         category = self.category_repository.get_by_id(category_id)
@@ -37,7 +37,7 @@ class TransactionService:
         return self.transaction_repository.create(
             user_id=user_id,
             amount=amount,
-            type=type,
+            transaction_type=transaction_type,
             description=description,
             date=date,
             category_id=category_id
@@ -46,7 +46,7 @@ class TransactionService:
     def list_transactions(
         self,
         user_id: int,
-        type: str | None = None,
+        transaction_type: str | None = None,
         category_id: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
@@ -56,7 +56,7 @@ class TransactionService:
         
         return self.transaction_repository.get_all_for_user(
             user_id,
-            type=type,
+            transaction_type=transaction_type,
             category_id=category_id,
             start_date=start_date,
             end_date=end_date,

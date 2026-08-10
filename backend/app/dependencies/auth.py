@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer,HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
@@ -9,7 +9,10 @@ from app.repositories.user_repository import UserRepository
 from app.models.user import User
 
 # For swagger
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+# For swagger testing only
+oauth2_scheme = HTTPBearer()
 
 
 def get_current_user(
@@ -24,9 +27,9 @@ def get_current_user(
 
     try:
         payload = jwt.decode(
-            token,
+            token.credentials, ## change back to just token after testing
             settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.TOKEN_ALGORITHM]
         )
         user_id: str = payload.get("sub")
         if user_id is None:

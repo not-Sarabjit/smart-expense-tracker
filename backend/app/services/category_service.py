@@ -55,7 +55,7 @@ class CategoryService:
             raise ValueError('Category does not exist')
 
         if category.user_id != user_id:
-            raise ValueError('Cannot update default Category')
+            raise ValueError('Cannot update default / Other User\'s Category')
 
         updates = {}
 
@@ -107,6 +107,6 @@ class CategoryService:
             raise ValueError('Category does not exist')
 
         if category.user_id != user_id:
-            raise ValueError('Cannot delete default categories')
+            raise ValueError('Cannot delete default / Other user\'s categories')
 
         self.category_repository.delete(category=category)        

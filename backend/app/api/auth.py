@@ -18,13 +18,13 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(
-    user_in: UserCreate,
+    user: UserCreate,
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """
     Register a new user.
     """
-    return auth_service.register(user_in)
+    return auth_service.register(first_name = user.first_name, last_name = user.last_name, password = user.password, email = user.email)
 
 
 @router.post("/login", response_model=Token)
@@ -35,6 +35,6 @@ def login(
     """
     Authenticate a user and return a JWT access token.
     """
-    return auth_service.login(credentials)
-
+    access_token =  auth_service.login(email = credentials.email, password = credentials.password)
+    return Token(access_token=access_token)
 

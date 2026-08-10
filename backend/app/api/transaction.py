@@ -50,7 +50,7 @@ def get_summary(
 
 @router.get("", response_model=list[TransactionOut])
 def list_transactions(
-    type: Optional[str] = Query(None, description="Filter by 'income' or 'expense'"),
+    transaction_type: Optional[str] = Query(None, description="Filter by 'income' or 'expense'"),
     category_id: Optional[int] = Query(None, description="Filter by category"),
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
@@ -62,7 +62,7 @@ def list_transactions(
     """List the current user's transactions, with optional filtering and sorting."""
     return service.list_transactions(
         user_id=current_user.id,
-        type=type,
+        transaction_type=transaction_type,
         category_id=category_id,
         start_date=start_date,
         end_date=end_date,
@@ -79,7 +79,14 @@ def create_transaction(
     service: TransactionService = Depends(get_transaction_service),
 ):
     """Create a new income or expense transaction for the current user."""
-    return service.create_transaction(user_id=current_user.id, data=payload)
+    return service.create_transaction(
+        user_id=current_user.id,
+        amount = payload.amount,
+        transaction_type = payload.transaction_type,
+        description = payload.description,
+        date = payload.date,
+        category_id = payload.category_id
+        )
 
 
 

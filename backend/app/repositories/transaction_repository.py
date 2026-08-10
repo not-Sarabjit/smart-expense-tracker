@@ -11,7 +11,7 @@ class TransactionRepository:
     def get_all_for_user(
         self,
         user_id: int,
-        type: str | None = None,
+        transaction_type: str | None = None,
         category_id: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
@@ -23,11 +23,11 @@ class TransactionRepository:
         Fetches transactions made by the user ( Default returned 50 most recent ), Using the user_id
         '''
 
-        statement = self.db.select(Transaction).where(Transaction.user_id == user_id)
+        statement = select(Transaction).where(Transaction.user_id == user_id)
 
-        if type:
-            statement = statement.where(Transaction.type == type)
-        if category_id:
+        if transaction_type:
+            statement = statement.where(Transaction.type == transaction_type)
+        if category_id is not None:
             statement = statement.where(Transaction.category_id == category_id)
         if start_date:
             statement = statement.where(Transaction.date >= start_date)
@@ -60,7 +60,7 @@ class TransactionRepository:
     def create(
         self,
         amount: float,
-        type: str,
+        transaction_type: str,
         description: str,
         date: date,
         user_id: int,
@@ -69,7 +69,7 @@ class TransactionRepository:
         
         transaction = Transaction(
             amount=amount,
-            type=type,
+            type=transaction_type,
             description=description,
             date=date,
             user_id=user_id,

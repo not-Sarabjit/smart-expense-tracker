@@ -23,7 +23,7 @@ def list_categories(
     """
     List all categories belonging to the current user.
     """
-    return category_service.list(current_user.id)
+    return category_service.list_category(current_user.id)
 
 @router.get('/{category_id}', response_model=CategoryOut)
 def get_category(
@@ -46,7 +46,7 @@ def create_category(
     """
     Create a new category for the current user.
     """
-    return category_service.create_category(current_user.id, category_in)
+    return category_service.create_category(user_id = current_user.id,name = category_in.name, category_type= category_in.category_type)
 
 
 @router.put("/{category_id}", response_model=CategoryOut)
@@ -59,7 +59,7 @@ def update_category(
     """
     Update a category owned by the current user.
     """
-    return category_service.update_category(current_user.id, category_id, category_update)
+    return category_service.update_category(user_id=current_user.id,category_id=category_id,name=category_update.name, category_type=category_update.category_type)
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
