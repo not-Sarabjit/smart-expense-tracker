@@ -2,7 +2,7 @@ from datetime import date
 from app.repositories.transaction_repository import TransactionRepository
 from app.repositories.category_repository import CategoryRepository
 from app.models.transaction import Transaction
-
+from app.utils.date_utils import last_day_of_month
 
 class TransactionService:
     def __init__(self, transaction_repository: TransactionRepository, category_repository: CategoryRepository):
@@ -102,7 +102,7 @@ class TransactionService:
         transactions = self.transaction_repository.get_all_for_user(
             user_id,
             start_date=date(year, month, 1),
-            end_date=_last_day_of_month(year, month),
+            end_date=last_day_of_month(year, month),
         )
         income = sum(t.amount for t in transactions if t.type == 'income')
         expense = sum(t.amount for t in transactions if t.type == 'expense')
@@ -113,8 +113,3 @@ class TransactionService:
         }
 
 
-def _last_day_of_month(year: int, month: int) -> date:
-    if month == 12:
-        return date(year, 12, 31)
-    from datetime import timedelta
-    return date(year, month + 1, 1) - timedelta(days=1)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -24,8 +24,13 @@ def register(
     """
     Register a new user.
     """
-    return auth_service.register(first_name = user.first_name, last_name = user.last_name, password = user.password, email = user.email)
-
+    try:
+        return auth_service.register(first_name = user.first_name, last_name = user.last_name, password = user.password, email = user.email)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e)
+        )
 
 @router.post("/login", response_model=Token)
 def login(
@@ -35,6 +40,11 @@ def login(
     """
     Authenticate a user and return a JWT access token.
     """
-    access_token =  auth_service.login(email = credentials.email, password = credentials.password)
-    return Token(access_token=access_token)
-
+    try:
+        access_token =  auth_service.login(email = credentials.email, password = credentials.password)
+        return Token(access_token=access_token)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e)
+        )
