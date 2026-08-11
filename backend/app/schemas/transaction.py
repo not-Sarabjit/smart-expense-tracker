@@ -2,7 +2,7 @@ from datetime import date as date_type, datetime
 from decimal import Decimal
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 
 
 class TransactionBase(BaseModel):
@@ -10,7 +10,7 @@ class TransactionBase(BaseModel):
 
     amount: Decimal
     date: date_type
-    transaction_type: Literal["income", "expense"]
+    transaction_type: Literal["income", "expense"] = Field(alias='type')
     category_id: int
     description: Optional[str] = None
 
@@ -42,7 +42,7 @@ class TransactionUpdate(BaseModel):
 
     amount: Optional[Decimal] = None
     date: Optional[date_type] = None
-    category_type: Optional[Literal["income", "expense"]] = None
+    transaction_type: Optional[Literal["income", "expense"]] = None
     category_id: Optional[int] = None
     description: Optional[str] = None
 

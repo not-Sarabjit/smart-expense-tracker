@@ -112,7 +112,7 @@ def update_transaction(
     return service.update_transaction(
         user_id=current_user.id,
         transaction_id=transaction_id,
-        data=payload,
+        **payload.model_dump(exclude_unset=True)
     )
 
 

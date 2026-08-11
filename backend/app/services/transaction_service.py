@@ -9,6 +9,19 @@ class TransactionService:
         self.transaction_repository = transaction_repository
         self.category_repository = category_repository
 
+
+
+    def get_transaction(self, transaction_id: int, user_id: int) -> Transaction:
+        '''
+        Fetches just a single transaction for the user
+        '''
+        transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id, user_id=user_id)
+
+        if not transaction:
+            raise ValueError('Transaction does not exist')
+
+        return transaction
+
     def create_transaction(
         self,
         user_id: int,
@@ -66,11 +79,9 @@ class TransactionService:
 
     def update_transaction(self, user_id: int, transaction_id: int, **fields) -> Transaction:
 
-        transaction = self.transaction_repository.get_by_id(transaction_id)
+        transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id, user_id=user_id)
         if not transaction:
             raise ValueError('Transaction does not exist')
-        if transaction.user_id != user_id:
-            raise ValueError("Cannot update another user's transaction")
         
         ##To do: For now, all fields can get updated, later add validation to check for non-editable fields like user_id etc
         updates = {k: v for k, v in fields.items() if v is not None and v != getattr(transaction, k)}
@@ -80,7 +91,7 @@ class TransactionService:
 
     def delete_transaction(self, user_id: int, transaction_id: int) -> None:
 
-        transaction = self.transaction_repository.get_by_id(transaction_id)
+        transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id,user_id=user_id)
         if not transaction:
             raise ValueError('Transaction does not exist')
         if transaction.user_id != user_id:
