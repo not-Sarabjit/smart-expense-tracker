@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, category, transaction
 from app.middleware.logging_middleware import RequestLoggingMiddleware
 
+from app.core.logging import setup_logging
+
+
+setup_logging()
 
 app = FastAPI(
     title="Expense Tracker API",

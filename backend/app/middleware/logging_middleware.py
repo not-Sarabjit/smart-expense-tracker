@@ -23,7 +23,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             duration_ms,
         )
 
-        # Optional: expose the timing to clients/devtools
-        response.headers["X-Process-Time-Ms"] = f"{duration_ms:.2f}"
+        # To expose the timing to in api response
+        response.headers["request-process-time"] = f"{duration_ms:.2f}"
 
         return response
