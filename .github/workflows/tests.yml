@@ -27,8 +27,8 @@ jobs:
       - name: Run pytest
         working-directory: backend
         run:  |
-        pwd
-        ls -la
-        python -c "import os, sys; print(os.getcwd()); print(sys.path)"
-        python -c "import app; print(app)"
-        pytest -v
+          pwd
+          ls -la
+          python -c "import os, sys; print(os.getcwd()); print(sys.path)"
+          python -c "import app; print(app)"
+          pytest -v
