@@ -26,4 +26,7 @@ jobs:
  
       - name: Run pytest
         working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run:  python -m pytest -v
