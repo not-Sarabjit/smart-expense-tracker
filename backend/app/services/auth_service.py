@@ -2,6 +2,10 @@ from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta
 from app.repositories.user_repository import UserRepository
+from app.core.exceptions import (
+    EmailAlreadyExistsException,
+    InvalidCredentialsException
+    )
 
 from app.core.config import settings
 
@@ -21,8 +25,10 @@ class AuthService:
         '''
         Checks if the email is not already registered, if not thn creates a new user and returns the user
         '''
+
         if self.user_repository.get_by_email(email):
-            raise ValueError("Email already registered")
+            raise EmailAlreadyExistsException()
+
         hashed_password = pwd_context.hash(password)
         return self.user_repository.create(
             email=email,
@@ -35,9 +41,13 @@ class AuthService:
         '''
         Verifies if username and password are correct, provides token if verified
         '''
+
         user = self.user_repository.get_by_email(email)
+
         if not user or not pwd_context.verify(password, user.hashed_password):
-            raise ValueError("Invalid credentials")
+            raise InvalidCredentialsException()
+
+
         access_token = self._create_access_token(user.id)
         return access_token
 

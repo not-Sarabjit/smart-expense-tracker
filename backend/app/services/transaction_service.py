@@ -4,6 +4,13 @@ from app.repositories.category_repository import CategoryRepository
 from app.models.transaction import Transaction
 from app.utils.date_utils import last_day_of_month
 
+from app.core.exceptions import (
+    TransactionNotFoundException,
+    CategoryAccessDeniedException,
+    CategoryNotFoundException,
+
+)
+
 class TransactionService:
     def __init__(self, transaction_repository: TransactionRepository, category_repository: CategoryRepository):
         self.transaction_repository = transaction_repository
@@ -18,7 +25,7 @@ class TransactionService:
         transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id, user_id=user_id)
 
         if not transaction:
-            raise ValueError('Transaction does not exist')
+            raise TransactionNotFoundException()
 
         return transaction
 
@@ -31,21 +38,13 @@ class TransactionService:
         date: date,
         category_id: int
     ) -> Transaction:
-        
-        # Amount validation
-        if amount <= 0:
-            raise ValueError('Amount must be positive')
-
-        # Transaction Type validation
-        if transaction_type not in ('income', 'expense'):
-            raise ValueError('Transaction Type must be income or expense')
-
+    
         # Category Validation
         category = self.category_repository.get_by_id(category_id)
         if not category:
-            raise ValueError('Category does not exist')
+            raise CategoryNotFoundException()
         if category.user_id is not None and category.user_id != user_id:
-            raise ValueError("Cannot use another user's category")
+            raise CategoryAccessDeniedException()
 
         return self.transaction_repository.create(
             user_id=user_id,
@@ -81,7 +80,7 @@ class TransactionService:
 
         transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id, user_id=user_id)
         if not transaction:
-            raise ValueError('Transaction does not exist')
+            raise TransactionNotFoundException()
         
         ##To do: For now, all fields can get updated, later add validation to check for non-editable fields like user_id etc
         updates = {k: v for k, v in fields.items() if v is not None and v != getattr(transaction, k)}
@@ -93,9 +92,8 @@ class TransactionService:
 
         transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id,user_id=user_id)
         if not transaction:
-            raise ValueError('Transaction does not exist')
-        if transaction.user_id != user_id:
-            raise ValueError("Cannot delete another user's transaction")
+            raise TransactionNotFoundException()
+
         self.transaction_repository.delete(transaction=transaction)
 
     def get_monthly_summary(self, user_id: int, year: int, month: int) -> dict:

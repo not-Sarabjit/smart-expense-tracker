@@ -30,8 +30,8 @@ def test_register_duplicate_email_fails(client):
     assert first.status_code in (200, 201)
 
     second = client.post("/api/v1/auth/register", json=payload)
-    assert second.status_code == 401
-    assert "email" in second.json()["detail"].lower()
+    assert second.status_code == 409
+    assert second.json().get('message') == 'An account with this email already exists.'
 
 
 def test_register_missing_fields_fails(client):

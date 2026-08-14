@@ -1,9 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, category, transaction
 from app.middleware.logging_middleware import RequestLoggingMiddleware
-
+from app.core.exceptions import AppException
 from app.core.logging import setup_logging
+from sqlalchemy.exc import SQLAlchemyError
 
 
 setup_logging()
@@ -30,6 +32,43 @@ app.add_middleware(
 
 # Logging Middleware
 app.add_middleware(RequestLoggingMiddleware)
+
+
+# --- Global exception handlers ---
+
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": True,
+            "message": exc.message,
+            "status_code": exc.status_code,
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Catch-all for anything unexpected so the API never leaks a raw traceback
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": True,
+            "message": "Internal server error",
+            "status_code": 500,
+        },
+    )
+
+@app.exception_handler(SQLAlchemyError)
+async def database_exception_handler(
+    request: Request,
+    exc: SQLAlchemyError,
+):
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database service is temporarily unavailable."},
+    )
 
 @app.get("/health")
 def health_check():

@@ -1,5 +1,8 @@
 from app.repositories.user_repository import UserRepository
-
+from app.core.exceptions import (
+    UserNotFoundException,
+    EmailAlreadyExistsException,
+)
 
 class UserService:
     def __init__(self, user_repository: UserRepository):
@@ -9,7 +12,7 @@ class UserService:
 
         user = self.user_repository.get_by_id(user_id)
         if not user:
-            raise ValueError('User Not Found')
+            raise UserNotFoundException()
         return user
 
     def update_profile(
@@ -26,24 +29,20 @@ class UserService:
         user = self.user_repository.get_by_id(user_id)
 
         if not user:
-            raise ValueError('User Not Found')
+            raise UserNotFoundException()
 
         updates = {}
 
         if first_name is not None and first_name != user.first_name:
-
-            if first_name.strip() == '':
-                raise ValueError('First Name cannot be empty')
-
             updates['first_name'] = first_name
 
-        if last_name and user.last_name != last_name:
+        if last_name is not None and user.last_name != last_name:
             updates['last_name'] = last_name
 
         if email and user.email != email:
 
             if self.user_repository.get_by_email(email):
-                raise ValueError('Email already in use')
+                raise EmailAlreadyExistsException()
             
             updates['email'] = email
 

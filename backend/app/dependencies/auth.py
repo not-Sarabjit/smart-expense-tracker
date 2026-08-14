@@ -27,7 +27,7 @@ def get_current_user(
 
     try:
         payload = jwt.decode(
-            token.credentials, ## change back to just token after testing
+            token.credentials, 
             settings.SECRET_KEY,
             algorithms=[settings.TOKEN_ALGORITHM]
         )

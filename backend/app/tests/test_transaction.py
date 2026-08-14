@@ -134,12 +134,10 @@ def test_update_another_users_transaction_fails(client, user_a_headers, user_b_h
     )
     tx_id = create.json()["id"]
 
-    with pytest.raises(ValueError):
-        client.put(
-            f"/api/v1/transactions/{tx_id}",
-            json={"amount": 999.00},
-            headers=user_b_headers,
-        )
+    response = client.put(f"/api/v1/transactions/{tx_id}",json={"amount": 999.00},headers=user_b_headers)
+
+    assert response.status_code == 404
+    assert response.json().get('message')== 'Transaction not found.'
 
 
 def test_delete_transaction_success(client, user_a_headers, category_id):
@@ -175,8 +173,9 @@ def test_delete_another_users_transaction_fails(client, user_a_headers, user_b_h
     )
     tx_id = create.json()["id"]
 
-    with pytest.raises(ValueError):
-        client.delete(f"/api/v1/transactions/{tx_id}", headers=user_b_headers)
+    response = client.delete(f"/api/v1/transactions/{tx_id}", headers=user_b_headers)
+    assert response.status_code == 404
+    assert response.json().get('message')== 'Transaction not found.'
 
 
 def test_no_auth_token_fails(client):
