@@ -38,7 +38,7 @@ class CategoryOut(BaseModel):
     id: int
     name: str
     category_type: Literal['income', 'expense']
-    user_id: int
+    user_id: int | None
     
     # So attributes from the objects can be fetched
     class Config:
