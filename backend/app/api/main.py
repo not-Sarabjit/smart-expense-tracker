@@ -6,9 +6,12 @@ from app.middleware.logging_middleware import RequestLoggingMiddleware
 from app.core.exceptions import AppException
 from app.core.logging import setup_logging
 from sqlalchemy.exc import SQLAlchemyError
-
+import logging
 
 setup_logging()
+
+logger = logging.getLogger(__name__)
+
 
 app = FastAPI(
     title="Expense Tracker API",
@@ -65,10 +68,13 @@ async def database_exception_handler(
     request: Request,
     exc: SQLAlchemyError,
 ):
+    logger.exception("DATABASE ERROR")
+
     return JSONResponse(
         status_code=503,
-        content={"detail": "Database service is temporarily unavailable."},
+        content={"detail": str(exc)},
     )
+
 
 @app.get("/health")
 def health_check():
