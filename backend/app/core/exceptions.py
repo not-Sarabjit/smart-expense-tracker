@@ -75,3 +75,21 @@ class UserNotFoundException(AppException):
         status_code: int = 404,
     ):
         super().__init__(message, status_code)
+
+# -------------------------   User Exceptions ----------------------
+class AIServiceError(AppException):
+    def __init__(self, message: str = "AI service temporarily unavailable.", original_error: Exception = None):
+        self.original_error = original_error
+        super().__init__(message=message, status_code=503)
+
+
+class AIRateLimitError(AIServiceError):
+    def __init__(self, message: str = "AI service rate limit reached. Please try again shortly.", original_error: Exception = None):
+        super().__init__(message=message, original_error=original_error)
+        self.status_code = 429
+
+
+class AITokenLimitError(AIServiceError):
+    def __init__(self, message: str = "Input too long for AI model.", original_error: Exception = None):
+        super().__init__(message=message, original_error=original_error)
+        self.status_code = 400
