@@ -8,10 +8,11 @@ class Settings(BaseSettings):
   DATABASE_URL: str
   SECRET_KEY: str
   TOKEN_ALGORITHM: str
+
   AI_PROVIDER: Literal["groq", "openai"] = "groq"
-  AI_MODEL: str 
-  AI_API_KEY: str
-  AI_MAX_TOKENS: int 
+  AI_MODEL: str = 'groq'
+  AI_API_KEY: str = ''
+  AI_MAX_TOKENS: int = 1024
   AI_TEMPERATURE: float = 0.2
 
     
