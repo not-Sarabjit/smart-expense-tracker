@@ -1,21 +1,19 @@
-from fastapi import FastAPI
+# paste in a Python shell or a temp script, then delete
+from openai import OpenAI
 
-from app.core.logging import setup_logging
-import logging
+client = OpenAI(
+    api_key="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",
+    base_url="https://api.groq.com/openai/v1",
+)
 
-from passlib.context import CryptContext
+models = client.models.list()
 
+for model in models.data:
+    print(model.id)
 
-## Main setup for logging
-setup_logging()
-
-# Creating a logger for this module
-logger = logging.getLogger(__name__)
-
-
-app = FastAPI()
-
-
-@app.get('/health')
-def get_health():
-    return {'status' : 'OK'}
+resp = client.chat.completions.create(
+    model="openai/gpt-oss-20b",
+    messages=[{"role": "user", "content": "What is up"}]
+)
+print(resp.choices[0].message.content)
+# Expected: "Hello!" or similar
