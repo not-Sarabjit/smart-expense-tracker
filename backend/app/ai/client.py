@@ -1,16 +1,18 @@
 import json
 import groq
+from groq import Groq
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
+    retry_if_exception,
     before_sleep_log,
 )
 import logging
 
 from app.core.config import settings
 from app.core.exceptions import AIServiceError, AIRateLimitError, AITokenLimitError
+from app.ai import token_utils
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +23,16 @@ class AIClient:
     """
 
     def __init__(self):
-        self._client = groq.Groq(api_key=settings.AI_API_KEY)
+        self._client = Groq(api_key=settings.AI_API_KEY)
         self.model = settings.AI_MODEL
         self.max_tokens = settings.AI_MAX_TOKENS
         self.temperature = settings.AI_TEMPERATURE
 
     @retry(
-        retry=retry_if_exception_type(AIServiceError),
+        retry=retry_if_exception(
+            lambda error: isinstance(error, AIServiceError)
+            and not isinstance(error, AITokenLimitError)
+        ),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         before_sleep=before_sleep_log(logger, logging.WARNING),
@@ -56,6 +61,11 @@ class AIClient:
             AIServiceError:    On any other provider error after 3 retries.
         """
         try:
+            token_utils.assert_within_limit(
+                prompt,
+                limit=self.max_tokens,
+                model=self.model,
+            )
             response = self._client.chat.completions.create(
                 model=self.model,
                 max_tokens=max_tokens or self.max_tokens,
@@ -64,6 +74,9 @@ class AIClient:
                     {"role": "user", "content": prompt}],
             )
             return response.choices[0].message.content
+
+        except AITokenLimitError:
+            raise
 
         except groq.RateLimitError as e:
             raise AIRateLimitError()
@@ -85,6 +98,12 @@ class AIClient:
             logger.error("Groq connection error: %s", str(e))
             raise AIServiceError(
                 message="Could not reach AI provider."
+            )
+        except Exception as e:
+            logger.error("Unexpected AI provider error: %s", str(e))
+            raise AIServiceError(
+                message="AI service temporarily unavailable.",
+                original_error=e,
             )
 
     def complete_json(
