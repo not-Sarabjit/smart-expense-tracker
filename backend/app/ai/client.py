@@ -1,6 +1,6 @@
 import json
 import groq
-from groq import Groq
+from groq import AsyncGroq
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -23,7 +23,7 @@ class AIClient:
     """
 
     def __init__(self):
-        self._client = Groq(api_key=settings.AI_API_KEY)
+        self._client = AsyncGroq(api_key=settings.AI_API_KEY)
         self.model = settings.AI_MODEL
         self.max_tokens = settings.AI_MAX_TOKENS
         self.temperature = settings.AI_TEMPERATURE
@@ -38,7 +38,7 @@ class AIClient:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def complete(
+    async def complete(
         self,
         prompt: str,
         system: str = "You are a helpful financial assistant.",
@@ -66,7 +66,7 @@ class AIClient:
                 limit=self.max_tokens,
                 model=self.model,
             )
-            response = self._client.chat.completions.create(
+            response = await self._client.chat.completions.create(
                 model=self.model,
                 max_tokens=max_tokens or self.max_tokens,
                 messages=[
@@ -106,7 +106,7 @@ class AIClient:
                 original_error=e,
             )
 
-    def complete_json(
+    async def complete_json(
         self,
         prompt: str,
         system: str = "You are a helpful financial assistant. Always respond with valid JSON only.",
@@ -119,7 +119,7 @@ class AIClient:
         Raises:
             AIServiceError: If the model returns non-parseable JSON after retries.
         """
-        raw = self.complete(prompt=prompt, system=system, max_tokens=max_tokens)
+        raw = await self.complete(prompt=prompt, system=system, max_tokens=max_tokens)
 
         # Strip markdown fences if the model wraps the JSON anyway
         cleaned = raw.strip()
