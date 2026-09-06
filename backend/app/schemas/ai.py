@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 from datetime import date as date_type
 
 
@@ -11,6 +11,7 @@ class ExtractedTransaction(BaseModel):
     description: Optional[str] = Field(None, description="Clean merchant or purpose description")
     date: Optional[date_type] = Field(None, description="Transaction date, if mentioned")
     category_hint: Optional[str] = Field(None, description="AI-suggested category name (not ID)")
+    transaction_type: Literal['income', 'expense'] | None = Field(None, description="Category of the transaction ('income','expense')")
 
     class Config:
         json_schema_extra = {
@@ -19,7 +20,8 @@ class ExtractedTransaction(BaseModel):
                 "currency": "INR",
                 "description": "Pizza delivery",
                 "date": "2024-07-15",
-                "category_hint": "Food & Dining"
+                "category_hint": "Food & Dining",
+                "transaction_type": "expense"
             }
         }
 
@@ -46,7 +48,8 @@ class ExtractionResponse(BaseModel):
                     "currency": "INR",
                     "description": "Pizza delivery",
                     "date": "2024-07-15",
-                    "category_hint": "Food & Dining"
+                    "category_hint": "Food & Dining",
+                    "transaction_type": "expense"
                 },
                 "raw_text": "paid 340 for pizza last night",
                 "confidence": 0.92,
@@ -66,6 +69,21 @@ class ExtractionRequest(BaseModel):
                 "text": "paid 340 for pizza last night"
             }
         }
+
+# --- Creates new transaction and saves in DB ---
+
+class ExtractAndSaveResponse(BaseModel):
+    """
+    Returned by /ai/extract-and-save.
+    - dry_run=true  → saved_transaction is None, preview has the extracted data
+    - dry_run=false → saved_transaction is the real DB record, preview is None
+    """
+    success: bool
+    dry_run: bool
+    extraction: ExtractionResponse                      # always present
+    saved_transaction: Optional[dict] = None            # only when dry_run=false and save succeeded
+    preview: Optional[ExtractedTransaction] = None      # only when dry_run=true
+    message: Optional[str] = None
 
 
 # --- AI Error Response ---

@@ -40,11 +40,12 @@ class TransactionService:
     ) -> Transaction:
     
         # Category Validation
-        category = self.category_repository.get_by_id(category_id)
-        if not category:
-            raise CategoryNotFoundException()
-        if category.user_id is not None and category.user_id != user_id:
-            raise CategoryAccessDeniedException()
+        if category_id is not None:
+            category = self.category_repository.get_by_id(category_id)
+            if not category:
+                raise CategoryNotFoundException()
+            if category.user_id is not None and category.user_id != user_id:
+                raise CategoryAccessDeniedException()
 
         return self.transaction_repository.create(
             user_id=user_id,

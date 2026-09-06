@@ -53,6 +53,7 @@ EXTRACT_TRANSACTION = PromptTemplate(
         '  "description": "<merchant or purpose or null>",\n'
         '  "date": "<YYYY-MM-DD or null>",\n'
         '  "category_hint": "<best guess category or null>",\n'
+        '  "transaction_type": "<One of these exact values =  ("income","expense")'
         '  "confidence": <0.0-1.0>\n'
         '}}\n'
         "Do not include any text outside the JSON object. "

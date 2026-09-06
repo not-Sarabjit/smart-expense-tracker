@@ -59,13 +59,20 @@ async def extract_transaction_from_text(text: str) -> ExtractionResponse:
         logger.debug(f"Raw LLM response for extraction: {parsed}")
     except AIServiceError as e:
         logger.error(f"AI service error during extraction: {e}")
-        return ExtractionResponse(
-            success=False,
-            data=None,
-            raw_text=text,
-            confidence=0.0,
-            error_message=str(e),
-        )
+        if "invalid json" in str(e).lower():
+            return ExtractionResponse(
+                success=False,
+                data=None,
+                raw_text=text,
+                confidence=0.0,
+                error_message="AI returned unparseable output. Please try again.",
+            )
+        raise
+    except Exception as e:
+        raise AIServiceError(
+            message=f"Groq API call failed: {e}",
+            original_error=e,
+        ) from e
 
     # # --- Parse JSON ---
     # try:
@@ -88,6 +95,7 @@ async def extract_transaction_from_text(text: str) -> ExtractionResponse:
             description=parsed.get("description"),
             date=_parse_date(parsed.get("date")),
             category_hint=parsed.get("category_hint"),
+            transaction_type=parsed.get('transaction_type')
         )
     except Exception as e:
         logger.warning(f"Pydantic validation failed: {e} | Parsed: {parsed}")

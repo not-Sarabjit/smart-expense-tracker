@@ -11,7 +11,7 @@ class TransactionBase(BaseModel):
     amount: Decimal
     date: date_type
     transaction_type: Literal["income", "expense"] = Field(alias='type')
-    category_id: int
+    category_id: Optional[int] = None
     description: Optional[str] = None
 
     @field_validator("amount")
