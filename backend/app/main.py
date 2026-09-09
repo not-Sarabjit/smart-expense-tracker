@@ -1,7 +1,9 @@
+from app.ai.llm import get_llm
 
-from app.core.config import settings
 
-print(settings.GROQ_MODEL)        # llama-3.3-70b-versatile
-print(settings.QDRANT_URL)        # http://localhost:6333
-print(settings.QDRANT_COLLECTION) # expense_docs
-print("Config loaded successfully ✓")
+
+
+llm = get_llm()
+response = llm.invoke("Give me python code to reverse a list without using inbuilt")
+print(response.content)   # Should print something like: "Hello!"
+print("LLM factory working ✓")
