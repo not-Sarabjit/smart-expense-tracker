@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
 from sqlalchemy import create_engine
-from typing import Literal
+from typing import Literal, Optional
 
 
 class Settings(BaseSettings):
@@ -9,11 +9,16 @@ class Settings(BaseSettings):
   SECRET_KEY: str
   TOKEN_ALGORITHM: str
 
-  AI_PROVIDER: Literal["groq", "openai"] = "groq"
-  AI_MODEL: str = 'groq'
-  AI_API_KEY: str = ''
-  AI_MAX_TOKENS: int = 1024
-  AI_TEMPERATURE: float = 0.2
+  # ─── Groq LLM ────────────────────────────────────────────────────────────
+  GROQ_API_KEY: str
+  GROQ_MODEL: str = "llama-3.3-70b-versatile"
+  GROQ_TEMPERATURE: float = 0.1
+  GROQ_MAX_TOKENS: int = 2048
+
+  # ─── Qdrant Vector Store ──────────────────────────────────────────────────
+  QDRANT_URL: str = "http://localhost:6333"
+  QDRANT_API_KEY: Optional[str] = None        # None, for local docker, no auth is needed
+  QDRANT_COLLECTION: str = "expense_docs"
 
     
   model_config = ConfigDict(

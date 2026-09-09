@@ -1,6 +1,7 @@
 
+import asyncio
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from app.ai.client import AIClient
 from app.core.exceptions import AIServiceError, AITokenLimitError
@@ -28,7 +29,7 @@ def _make_mock_response(text: str) -> MagicMock:
 # 1. Successful call returns the expected text
 # ─────────────────────────────────────────────
 
-@patch("app.ai.client.Groq")
+@patch("app.ai.client.AsyncGroq")
 def test_complete_returns_text_on_success(mock_groq_class):
     """A successful Groq SDK call should return the model's text content."""
 
@@ -36,24 +37,24 @@ def test_complete_returns_text_on_success(mock_groq_class):
     mock_groq_class.return_value = mock_client
 
     fake_response = _make_mock_response("Test response from Groq")
-    mock_client.chat.completions.create.return_value = fake_response
+    mock_client.chat.completions.create = AsyncMock(return_value=fake_response)
 
     ai_client = AIClient()
 
-    result = ai_client.complete(
+    result = asyncio.run(ai_client.complete(
         prompt="Hello",
         system="You are a helpful assistant."
-    )
+    ))
 
     assert result == "Test response from Groq"
-    mock_client.chat.completions.create.assert_called_once()
+    mock_client.chat.completions.create.assert_awaited_once()
 
 
 # ─────────────────────────────────────────────
 # 2. SDK error triggers retry
 # ─────────────────────────────────────────────
 
-@patch("app.ai.client.Groq")
+@patch("app.ai.client.AsyncGroq")
 def test_complete_retries_on_sdk_error(mock_groq_class):
     """
     If the SDK raises on the first call but succeeds on the second,
@@ -65,25 +66,26 @@ def test_complete_retries_on_sdk_error(mock_groq_class):
 
     fake_response = _make_mock_response("Recovered after retry")
 
-    # First call raises, second call succeeds
-    mock_client.chat.completions.create.side_effect = [
-        Exception("Temporary API error"),
-        fake_response,
-    ]
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            Exception("Temporary API error"),
+            fake_response,
+        ]
+    )
 
     ai_client = AIClient()
 
-    result = ai_client.complete(prompt="Hello")
+    result = asyncio.run(ai_client.complete(prompt="Hello"))
 
     assert result == "Recovered after retry"
-    assert mock_client.chat.completions.create.call_count == 2
+    assert mock_client.chat.completions.create.await_count == 2
 
 
 # ─────────────────────────────────────────────
 # 3. Three failures raise AIServiceError
 # ─────────────────────────────────────────────
 
-@patch("app.ai.client.Groq")
+@patch("app.ai.client.AsyncGroq")
 def test_complete_raises_ai_service_error_after_max_retries(
     mock_groq_class
 ):
@@ -95,24 +97,23 @@ def test_complete_raises_ai_service_error_after_max_retries(
     mock_client = MagicMock()
     mock_groq_class.return_value = mock_client
 
-    mock_client.chat.completions.create.side_effect = Exception(
-        "Persistent API failure"
+    mock_client.chat.completions.create = AsyncMock(
+        side_effect=Exception("Persistent API failure")
     )
 
     ai_client = AIClient()
 
     with pytest.raises(AIServiceError):
-        ai_client.complete(prompt="Hello")
+        asyncio.run(ai_client.complete(prompt="Hello"))
 
-    # Tenacity retries 3 times total
-    assert mock_client.chat.completions.create.call_count == 3
+    assert mock_client.chat.completions.create.await_count == 3
 
 
 # ─────────────────────────────────────────────
 # 4. Token limit guard fires before the API call
 # ─────────────────────────────────────────────
 
-@patch("app.ai.client.Groq")
+@patch("app.ai.client.AsyncGroq")
 @patch("app.ai.token_utils.assert_within_limit")
 def test_token_limit_guard_raises_before_api_call(
     mock_assert_limit,
@@ -126,6 +127,7 @@ def test_token_limit_guard_raises_before_api_call(
     mock_client = MagicMock()
     mock_groq_class.return_value = mock_client
 
+    mock_client.chat.completions.create = AsyncMock()
     mock_assert_limit.side_effect = AITokenLimitError(
         "Prompt exceeds token limit"
     )
@@ -133,17 +135,16 @@ def test_token_limit_guard_raises_before_api_call(
     ai_client = AIClient()
 
     with pytest.raises(AITokenLimitError):
-        ai_client.complete(prompt="A" * 100_000)
+        asyncio.run(ai_client.complete(prompt="A" * 100_000))
 
-    # The SDK must NOT have been called
-    mock_client.chat.completions.create.assert_not_called()
+    mock_client.chat.completions.create.assert_not_awaited()
 
 
 # ─────────────────────────────────────────────
 # 5. complete_json parses valid JSON correctly
 # ─────────────────────────────────────────────
 
-@patch("app.ai.client.Groq")
+@patch("app.ai.client.AsyncGroq")
 def test_complete_json_returns_parsed_dict(mock_groq_class):
     """complete_json() should parse the LLM's JSON string into a dict."""
 
@@ -156,15 +157,15 @@ def test_complete_json_returns_parsed_dict(mock_groq_class):
         '"category": "Food"}'
     )
 
-    mock_client.chat.completions.create.return_value = (
-        _make_mock_response(fake_json)
+    mock_client.chat.completions.create = AsyncMock(
+        return_value=_make_mock_response(fake_json)
     )
 
     ai_client = AIClient()
 
-    result = ai_client.complete_json(
+    result = asyncio.run(ai_client.complete_json(
         prompt="Extract this transaction."
-    )
+    ))
 
     assert isinstance(result, dict)
     assert result["amount"] == 250.0
@@ -175,22 +176,24 @@ def test_complete_json_returns_parsed_dict(mock_groq_class):
 # 6. complete_json raises AIServiceError on malformed JSON
 # ─────────────────────────────────────────────
 
-@patch("app.ai.client.Groq")
+@patch("app.ai.client.AsyncGroq")
 def test_complete_json_raises_on_malformed_response(mock_groq_class):
     """Malformed JSON should result in AIServiceError."""
 
     mock_client = MagicMock()
     mock_groq_class.return_value = mock_client
 
-    mock_client.chat.completions.create.return_value = (
-        _make_mock_response(
-            "Sorry, I cannot help with that."
-        )
+    mock_client.chat.completions.create = AsyncMock(
+        return_value=_make_mock_response("Sorry, I cannot help with that.")
     )
 
     ai_client = AIClient()
 
     with pytest.raises(AIServiceError):
-        ai_client.complete_json(
+        asyncio.run(ai_client.complete_json(
             prompt="Extract this transaction."
-        )
+        ))
+
+
+if __name__ == '__main__':
+    print('Workng')
