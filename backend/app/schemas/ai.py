@@ -9,3 +9,18 @@ class ExtractedTransaction(BaseModel):
     category: str = Field(..., description="Category: Food, Transport, Shopping, Entertainment, Bills, Health, or Other")
     date: Optional[str] = Field(None, description="Transaction date in YYYY-MM-DD format if mentioned, else Current Date")
     confidence: float = Field(..., description="Confidence score between 0.0 and 1.0")
+
+
+class AskRequest(BaseModel):
+    question: str
+    session_id: str | None = None  # unused until Phase 3 memory; kept for API stability
+
+
+class AskResponse(BaseModel):
+    answer: str
+    source_documents: list[dict]
+    tokens_used: int | None = None
+
+
+class IngestResponse(BaseModel):
+    chunks_ingested: int
