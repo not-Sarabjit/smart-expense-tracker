@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
+
+from pydantic import BaseModel, EmailStr
+
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -7,9 +9,11 @@ class UserCreate(BaseModel):
     last_name: str
     password: str
 
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserOut(BaseModel):
     id: int
@@ -20,4 +24,4 @@ class UserOut(BaseModel):
 
     # So Pydantic can read attributes from the user object
     class Config:
-        from_attributes = True 
+        from_attributes = True

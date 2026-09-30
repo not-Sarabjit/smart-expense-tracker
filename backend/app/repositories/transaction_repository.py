@@ -1,6 +1,8 @@
 from datetime import date
-from sqlalchemy.orm import Session
+
 from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.models.transaction import Transaction
 
 
@@ -15,13 +17,13 @@ class TransactionRepository:
         category_id: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
-        sort_by: str = 'date',
-        sort_order: str = 'desc',
-        limit: int = 50
+        sort_by: str = "date",
+        sort_order: str = "desc",
+        limit: int = 50,
     ) -> list[Transaction]:
-        '''
+        """
         Fetches transactions made by the user ( Default returned 50 most recent ), Using the user_id
-        '''
+        """
 
         statement = select(Transaction).where(Transaction.user_id == user_id)
 
@@ -51,10 +53,12 @@ class TransactionRepository:
         return self.db.scalars(statement).all()
 
     def get_by_id(self, transaction_id: int, user_id: int) -> Transaction | None:
-        '''
+        """
         Fetches a single transaction by transaction id for the user
-        '''
-        statement = select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+        """
+        statement = select(Transaction).where(
+            Transaction.id == transaction_id, Transaction.user_id == user_id
+        )
         return self.db.scalars(statement).first()
 
     def create(
@@ -64,9 +68,9 @@ class TransactionRepository:
         description: str,
         date: date,
         user_id: int,
-        category_id: int | None = None
+        category_id: int | None = None,
     ) -> Transaction:
-        
+
         transaction = Transaction(
             amount=amount,
             type=transaction_type,
@@ -89,6 +93,6 @@ class TransactionRepository:
         return transaction
 
     def delete(self, transaction: Transaction) -> None:
-        
+
         self.db.delete(transaction)
         self.db.commit()

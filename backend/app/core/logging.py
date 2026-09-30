@@ -1,7 +1,7 @@
 import logging
 import sys
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 
 def setup_logging():
@@ -19,9 +19,7 @@ def setup_logging():
         return
 
     # Log Format - Date  Time | Log level | file path | Message
-    formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
     # Console logging
     console_handler = logging.StreamHandler(sys.stdout)

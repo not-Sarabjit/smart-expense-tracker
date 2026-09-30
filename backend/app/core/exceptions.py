@@ -1,5 +1,6 @@
 class AppException(Exception):
     """Base class for all custom application exceptions."""
+
     def __init__(self, message: str, status_code: int = 400):
         self.message = message
         self.status_code = status_code
@@ -9,27 +10,30 @@ class AppException(Exception):
 # -------------------------  User Auth Exceptions ----------------------
 class EmailAlreadyExistsException(AppException):
     """Raised when a user is trying to create a new account but the email is already registered."""
+
     def __init__(
-        self, 
+        self,
         message: str = "An account with this email already exists.",
         status_code: int = 409,
-        ):
+    ):
         super().__init__(message, status_code)
 
 
 class InvalidCredentialsException(AppException):
     """Raised when a user is trying to log in but username or password is/are incorrect"""
+
     def __init__(
         self,
         message: str = "Invalid email or password.",
         status_code: int = 401,
-        ):
+    ):
         super().__init__(message, status_code)
 
 
 # -------------------------   Category Exceptions ----------------------
 class CategoryAccessDeniedException(AppException):
-    """ Raised when a user is trying to access a category which exists but is not a default / user's custom created category"""
+    """Raised when a user is trying to access a category which exists but is not a default / user's custom created category"""
+
     def __init__(
         self,
         message: str = "You do not have permission to access this category.",
@@ -37,8 +41,10 @@ class CategoryAccessDeniedException(AppException):
     ):
         super().__init__(message, status_code)
 
+
 class CategoryNotFoundException(AppException):
-    """Raised when the category user is trying to fetch does not exist """
+    """Raised when the category user is trying to fetch does not exist"""
+
     def __init__(
         self,
         message: str = "Category does not exist",
@@ -55,6 +61,7 @@ class CategoryAlreadyExistsException(AppException):
     ):
         super().__init__(message, status_code)
 
+
 # -------------------------   Transaction Exceptions ----------------------
 
 
@@ -66,7 +73,9 @@ class TransactionNotFoundException(AppException):
     ):
         super().__init__(message, status_code)
 
+
 # -------------------------   User Exceptions ----------------------
+
 
 class UserNotFoundException(AppException):
     def __init__(
@@ -75,6 +84,3 @@ class UserNotFoundException(AppException):
         status_code: int = 404,
     ):
         super().__init__(message, status_code)
-
-
-

@@ -1,0 +1,87 @@
+[project]
+name = "smart-expense-tracker"
+version = "0.1.0"
+description = "FastAPI + PostgreSQL expense tracking API with AI-assisted categorization"
+requires-python = ">=3.12"
+
+dependencies = [
+    # Web API
+    "fastapi==0.139.0",
+    "uvicorn==0.51.0",
+
+    # Database and migrations
+    "SQLAlchemy==2.0.51",
+    "psycopg2-binary==2.9.12",
+    "alembic==1.18.5",
+
+    # Authentication and validation
+    "pydantic==2.13.4",
+    "pydantic-settings==2.9.1",
+    "email-validator==2.3.0",
+    "python-jose==3.5.0",
+    "passlib==1.7.4",
+    "bcrypt==4.0.1",
+]
+
+[project.optional-dependencies]
+ai = [
+    # These are the UNUSED pre-1.0 LangChain deps from the original repo.
+    # Step 0.10 will upgrade them to LangChain/LangGraph 1.x.
+    # Kept here so `uv sync --extra ai` reproduces the original environment.
+    "groq==0.30.0",
+    "langchain-core==0.3.61",
+    "langchain-community==0.3.24",
+    "langchain-groq==0.3.2",
+    "langchain-qdrant==0.2.0",
+    "qdrant-client==1.14.2",
+    "sentence-transformers==4.1.0",
+]
+dev = [
+    "pytest==9.1.1",
+    "httpx==0.27.2",
+    "locust==2.46.4",
+    "ruff>=0.7.0",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter (replaces flake8, isort, black)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["backend"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes (unused imports, undefined names, etc.)
+    "I",    # isort (import ordering)
+    "UP",   # pyupgrade (modernise syntax to target-version)
+    "B",    # flake8-bugbear (common pitfalls)
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long — the formatter handles wrapping
+    "B008",  # function call in default arg — required by FastAPI's Depends()
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py re-exports are intentional
+"backend/app/models/__init__.py" = ["F401"]
+# migrations/env.py imports models for side effects (Alembic autogenerate)
+"backend/migrations/env.py" = ["F401"]
+# B904: dead code that Step 0.4 will remove (bug B11)
+"backend/app/api/auth.py" = ["B904"]
+# UP042: TransactionType(str, Enum) — changing to StrEnum requires testing
+#        with SQLAlchemy/Alembic; will address when modernising models
+"backend/app/models/transaction.py" = ["UP042"]
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["backend/app/tests"]

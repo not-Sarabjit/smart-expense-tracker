@@ -1,28 +1,30 @@
 from datetime import date
-from app.repositories.transaction_repository import TransactionRepository
-from app.repositories.category_repository import CategoryRepository
-from app.models.transaction import Transaction
-from app.utils.date_utils import last_day_of_month
 
 from app.core.exceptions import (
-    TransactionNotFoundException,
     CategoryAccessDeniedException,
     CategoryNotFoundException,
-
+    TransactionNotFoundException,
 )
+from app.models.transaction import Transaction
+from app.repositories.category_repository import CategoryRepository
+from app.repositories.transaction_repository import TransactionRepository
+from app.utils.date_utils import last_day_of_month
+
 
 class TransactionService:
-    def __init__(self, transaction_repository: TransactionRepository, category_repository: CategoryRepository):
+    def __init__(
+        self, transaction_repository: TransactionRepository, category_repository: CategoryRepository
+    ):
         self.transaction_repository = transaction_repository
         self.category_repository = category_repository
 
-
-
     def get_transaction(self, transaction_id: int, user_id: int) -> Transaction:
-        '''
+        """
         Fetches just a single transaction for the user
-        '''
-        transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id, user_id=user_id)
+        """
+        transaction = self.transaction_repository.get_by_id(
+            transaction_id=transaction_id, user_id=user_id
+        )
 
         if not transaction:
             raise TransactionNotFoundException()
@@ -33,12 +35,12 @@ class TransactionService:
         self,
         user_id: int,
         amount: float,
-        transaction_type: str,         
+        transaction_type: str,
         description: str,
         date: date,
-        category_id: int
+        category_id: int,
     ) -> Transaction:
-    
+
         # Category Validation
         if category_id is not None:
             category = self.category_repository.get_by_id(category_id)
@@ -53,7 +55,7 @@ class TransactionService:
             transaction_type=transaction_type,
             description=description,
             date=date,
-            category_id=category_id
+            category_id=category_id,
         )
 
     def list_transactions(
@@ -63,10 +65,10 @@ class TransactionService:
         category_id: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
-        sort_by: str = 'date',
-        sort_order: str = 'desc'
+        sort_by: str = "date",
+        sort_order: str = "desc",
     ) -> list[Transaction]:
-        
+
         return self.transaction_repository.get_all_for_user(
             user_id,
             transaction_type=transaction_type,
@@ -79,19 +81,25 @@ class TransactionService:
 
     def update_transaction(self, user_id: int, transaction_id: int, **fields) -> Transaction:
 
-        transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id, user_id=user_id)
+        transaction = self.transaction_repository.get_by_id(
+            transaction_id=transaction_id, user_id=user_id
+        )
         if not transaction:
             raise TransactionNotFoundException()
-        
+
         ##To do: For now, all fields can get updated, later add validation to check for non-editable fields like user_id etc
-        updates = {k: v for k, v in fields.items() if v is not None and v != getattr(transaction, k)}
+        updates = {
+            k: v for k, v in fields.items() if v is not None and v != getattr(transaction, k)
+        }
         if updates:
             transaction = self.transaction_repository.update(transaction=transaction, **updates)
         return transaction
 
     def delete_transaction(self, user_id: int, transaction_id: int) -> None:
 
-        transaction = self.transaction_repository.get_by_id(transaction_id=transaction_id,user_id=user_id)
+        transaction = self.transaction_repository.get_by_id(
+            transaction_id=transaction_id, user_id=user_id
+        )
         if not transaction:
             raise TransactionNotFoundException()
 
@@ -103,12 +111,10 @@ class TransactionService:
             start_date=date(year, month, 1),
             end_date=last_day_of_month(year, month),
         )
-        income = sum(t.amount for t in transactions if t.type == 'income')
-        expense = sum(t.amount for t in transactions if t.type == 'expense')
+        income = sum(t.amount for t in transactions if t.type == "income")
+        expense = sum(t.amount for t in transactions if t.type == "expense")
         return {
-            'income': income,
-            'expense': expense,
-            'net': income - expense,
+            "income": income,
+            "expense": expense,
+            "net": income - expense,
         }
-
-

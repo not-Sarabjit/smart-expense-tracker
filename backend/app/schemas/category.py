@@ -1,10 +1,11 @@
-from pydantic import BaseModel, field_validator
 from typing import Literal
+
+from pydantic import BaseModel, field_validator
 
 
 class CategoryCreate(BaseModel):
     name: str
-    category_type: Literal['income', 'expense']
+    category_type: Literal["income", "expense"]
 
     @field_validator("name")
     @classmethod
@@ -16,9 +17,10 @@ class CategoryCreate(BaseModel):
 
         return value
 
+
 class CategoryUpdate(BaseModel):
     name: str | None = None
-    category_type: Literal['income', 'expense'] | None = None
+    category_type: Literal["income", "expense"] | None = None
 
     @field_validator("name")
     @classmethod
@@ -37,9 +39,9 @@ class CategoryUpdate(BaseModel):
 class CategoryOut(BaseModel):
     id: int
     name: str
-    category_type: Literal['income', 'expense']
+    category_type: Literal["income", "expense"]
     user_id: int | None
-    
+
     # So attributes from the objects can be fetched
     class Config:
         from_attributes = True

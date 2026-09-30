@@ -91,9 +91,7 @@ def test_list_transactions_only_shows_own(client, user_a_headers, user_b_headers
 
     response = client.get("/api/v1/transactions", headers=user_b_headers)
     assert response.status_code == 200
-    assert response.json() == [] or all(
-        tx["description"] != "A's coffee" for tx in response.json()
-    )
+    assert response.json() == [] or all(tx["description"] != "A's coffee" for tx in response.json())
 
 
 def test_update_transaction_success(client, user_a_headers, category_id):
@@ -119,7 +117,9 @@ def test_update_transaction_success(client, user_a_headers, category_id):
     assert response.json()["amount"] == "15.00"
 
 
-def test_update_another_users_transaction_fails(client, user_a_headers, user_b_headers, category_id):
+def test_update_another_users_transaction_fails(
+    client, user_a_headers, user_b_headers, category_id
+):
     """User B must not be able to update User A's transaction."""
     create = client.post(
         "/api/v1/transactions",
@@ -134,10 +134,12 @@ def test_update_another_users_transaction_fails(client, user_a_headers, user_b_h
     )
     tx_id = create.json()["id"]
 
-    response = client.put(f"/api/v1/transactions/{tx_id}",json={"amount": 999.00},headers=user_b_headers)
+    response = client.put(
+        f"/api/v1/transactions/{tx_id}", json={"amount": 999.00}, headers=user_b_headers
+    )
 
     assert response.status_code == 404
-    assert response.json().get('message')== 'Transaction not found.'
+    assert response.json().get("message") == "Transaction not found."
 
 
 def test_delete_transaction_success(client, user_a_headers, category_id):
@@ -158,7 +160,9 @@ def test_delete_transaction_success(client, user_a_headers, category_id):
     assert response.status_code in (200, 204)
 
 
-def test_delete_another_users_transaction_fails(client, user_a_headers, user_b_headers, category_id):
+def test_delete_another_users_transaction_fails(
+    client, user_a_headers, user_b_headers, category_id
+):
     """User B must not be able to delete User A's transaction."""
     create = client.post(
         "/api/v1/transactions",
@@ -175,7 +179,7 @@ def test_delete_another_users_transaction_fails(client, user_a_headers, user_b_h
 
     response = client.delete(f"/api/v1/transactions/{tx_id}", headers=user_b_headers)
     assert response.status_code == 404
-    assert response.json().get('message')== 'Transaction not found.'
+    assert response.json().get("message") == "Transaction not found."
 
 
 def test_no_auth_token_fails(client):

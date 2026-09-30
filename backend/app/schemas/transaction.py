@@ -1,8 +1,9 @@
-from datetime import date as date_type, datetime
+from datetime import date as date_type
+from datetime import datetime
 from decimal import Decimal
-from typing import Literal, Optional
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TransactionBase(BaseModel):
@@ -10,9 +11,9 @@ class TransactionBase(BaseModel):
 
     amount: Decimal
     date: date_type
-    transaction_type: Literal["income", "expense"] = Field(alias='type')
-    category_id: Optional[int] = None
-    description: Optional[str] = None
+    transaction_type: Literal["income", "expense"] = Field(alias="type")
+    category_id: int | None = None
+    description: str | None = None
 
     @field_validator("amount")
     @classmethod
@@ -31,6 +32,7 @@ class TransactionBase(BaseModel):
 
 class TransactionCreate(TransactionBase):
     """Schema for creating a new transaction. All fields required."""
+
     pass
 
 
@@ -40,22 +42,22 @@ class TransactionUpdate(BaseModel):
     Only provided fields will be updated.
     """
 
-    amount: Optional[Decimal] = None
-    date: Optional[date_type] = None
-    transaction_type: Optional[Literal["income", "expense"]] = None
-    category_id: Optional[int] = None
-    description: Optional[str] = None
+    amount: Decimal | None = None
+    date: date_type | None = None
+    transaction_type: Literal["income", "expense"] | None = None
+    category_id: int | None = None
+    description: str | None = None
 
     @field_validator("amount")
     @classmethod
-    def amount_must_be_positive(cls, value: Optional[Decimal]) -> Optional[Decimal]:
+    def amount_must_be_positive(cls, value: Decimal | None) -> Decimal | None:
         if value is not None and value <= 0:
             raise ValueError("Amount must be greater than zero")
         return value
 
     @field_validator("date")
     @classmethod
-    def date_not_in_future(cls, value: Optional[date_type]) -> Optional[date_type]:
+    def date_not_in_future(cls, value: date_type | None) -> date_type | None:
         if value is not None and value > date_type.today():
             raise ValueError("Date cannot be in the future")
         return value
@@ -66,8 +68,8 @@ class TransactionOut(TransactionBase):
 
     id: int
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     # So Pydantic can read attributes from the user object
     class Config:
-        from_attributes = True 
+        from_attributes = True
