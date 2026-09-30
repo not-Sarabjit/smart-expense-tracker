@@ -85,3 +85,4 @@ known-first-party = ["app"]
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["backend/app/tests"]
+pythonpath = ["backend"]
