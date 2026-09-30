@@ -9,11 +9,7 @@ class Settings(BaseSettings):
   SECRET_KEY: str
   TOKEN_ALGORITHM: str
 
-  # ─── Groq LLM ────────────────────────────────────────────────────────────
-  GROQ_API_KEY: str
-  GROQ_MODEL: str = "openai/gpt-oss-20b"
-  GROQ_TEMPERATURE: float = 0.1
-  GROQ_MAX_TOKENS: int = 2048
+
 
   # ─── Qdrant Vector Store ──────────────────────────────────────────────────
   QDRANT_URL: str = "http://localhost:6333"

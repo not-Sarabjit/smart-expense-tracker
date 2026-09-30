@@ -78,36 +78,3 @@ class UserNotFoundException(AppException):
 
 
 
-# -------------------------  AI Exceptions ----------------------
-
-class AIServiceError(AppException):
-    def __init__(
-            self, 
-            message: str = "AI service is temporarily unavailable",
-            status_code: int = 503,
-            ):
-        super().__init__(message, status_code)
-
-
-class AIRateLimitError(AppException):
-    def __init__(self, 
-                message: str = "AI rate limit reached, please try again shortly",
-                status_code:int = 429,
-                ):
-        super().__init__(message, status_code)
-
-
-class AIParseError(AppException):
-    def __init__(self, 
-                message: str = "AI returned an unreadable response",
-                status_code:int = 400,
-                ):
-        super().__init__(message, status_code)
-
-
-class AIContextTooLongError(AppException):
-    def __init__(self, 
-                message: str = "Input is too long for the AI to process",
-                status_code:int = 400,
-                ):
-        super().__init__(message, status_code)

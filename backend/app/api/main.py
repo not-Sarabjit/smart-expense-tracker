@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, category, transaction, ai
+from app.api import auth, category, transaction
 from app.middleware.logging_middleware import RequestLoggingMiddleware
 from app.core.exceptions import AppException
 from app.core.logging import setup_logging
@@ -85,6 +85,5 @@ def health_check():
 API_PREFIX = "/api/v1"
 
 app.include_router(auth.router, prefix=API_PREFIX, tags=["Auth"])
-app.include_router(ai.router, prefix=API_PREFIX, tags=['AI'])
 app.include_router(category.router, prefix=API_PREFIX, tags=["Categories"])
 app.include_router(transaction.router, prefix=API_PREFIX, tags=["Transactions"])
