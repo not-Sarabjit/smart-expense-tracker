@@ -84,3 +84,14 @@ class UserNotFoundException(AppException):
         status_code: int = 404,
     ):
         super().__init__(message, status_code)
+
+
+class FeatureDisabledException(AppException):
+    """Raised when a request hits a feature that is turned off by a feature flag."""
+
+    def __init__(
+        self,
+        message: str = "This feature is currently disabled",
+        status_code: int = 503,
+        ):
+        super().__init__(message,status_code)

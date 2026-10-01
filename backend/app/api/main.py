@@ -9,6 +9,9 @@ from app.api import auth, category, transaction
 from app.core.exceptions import AppException
 from app.core.logging import setup_logging
 from app.middleware.logging_middleware import RequestLoggingMiddleware
+from fastapi import Depends, FastAPI
+from app.core.config import Settings, get_settings
+
 
 setup_logging()
 
@@ -81,8 +84,13 @@ async def database_exception_handler(
 
 
 @app.get("/health")
-def health_check():
-    return {"status": "ok"}
+def health_check(settings: Settings = Depends(get_settings)):
+    """Liveness probe + which environment and feature flags this process is running with."""
+    return {
+        "status": "ok",
+        "environment": settings.app.environment,
+        "ai_enabled": settings.ai.enabled,
+    }
 
 
 API_PREFIX = "/api/v1"
