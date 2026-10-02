@@ -13,9 +13,7 @@ import os
 # Never connected to — app/tests/conftest.py overrides get_db with SQLite.
 # It must still be a Postgres-style URL because app/database/session.py passes
 # pool_size/max_overflow to create_engine, which SQLite's pool rejects.
-os.environ.setdefault(
-    "DATABASE_URL", "postgresql+psycopg2://test:test@localhost:5432/test_db"
-)
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg2://test:test@localhost:5432/test_db")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-used-outside-tests")
 os.environ.setdefault("TOKEN_ALGORITHM", "HS256")
 os.environ.setdefault("APP_ENVIRONMENT", "test")

@@ -62,6 +62,28 @@ class CategoryAlreadyExistsException(AppException):
         super().__init__(message, status_code)
 
 
+class CategoryInUseException(AppException):
+    """Raised when deleting a category that still has transactions attached to it."""
+
+    def __init__(
+        self,
+        message: str = "Category is used by existing transactions. Move or delete them first.",
+        status_code: int = 409,
+    ):
+        super().__init__(message, status_code)
+
+
+class CategoryTypeMismatchException(AppException):
+    """Raised when a transaction's type doesn't match its category's type (e.g. income in Food)."""
+
+    def __init__(
+        self,
+        message: str = "Category type does not match the transaction type.",
+        status_code: int = 422,
+    ):
+        super().__init__(message, status_code)
+
+
 # -------------------------   Transaction Exceptions ----------------------
 
 
@@ -93,5 +115,5 @@ class FeatureDisabledException(AppException):
         self,
         message: str = "This feature is currently disabled",
         status_code: int = 503,
-        ):
-        super().__init__(message,status_code)
+    ):
+        super().__init__(message, status_code)

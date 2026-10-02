@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -22,15 +22,14 @@ def register(
     """
     Register a new user.
     """
-    try:
-        return auth_service.register(
-            first_name=user.first_name,
-            last_name=user.last_name,
-            password=user.password,
-            email=user.email,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    # Domain errors (e.g. EmailAlreadyExistsException -> 409) are AppExceptions,
+    # rendered by the global handler in main.py — no try/except needed here.
+    return auth_service.register(
+        first_name=user.first_name,
+        last_name=user.last_name,
+        password=user.password,
+        email=user.email,
+    )
 
 
 @router.post("/login", response_model=Token)
@@ -41,8 +40,5 @@ def login(
     """
     Authenticate a user and return a JWT access token.
     """
-    try:
-        access_token = auth_service.login(email=credentials.email, password=credentials.password)
-        return Token(access_token=access_token)
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
+    access_token = auth_service.login(email=credentials.email, password=credentials.password)
+    return Token(access_token=access_token)

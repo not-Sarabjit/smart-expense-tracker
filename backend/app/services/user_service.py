@@ -47,6 +47,6 @@ class UserService:
             updates["email"] = email
 
         if updates:
-            user = self.user_repository.update(user, updates)
+            user = self.user_repository.update(user, **updates)
 
         return user

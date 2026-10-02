@@ -1,6 +1,7 @@
 from app.core.exceptions import (
     CategoryAccessDeniedException,
     CategoryAlreadyExistsException,
+    CategoryInUseException,
     CategoryNotFoundException,
 )
 from app.models.category import Category
@@ -90,6 +91,10 @@ class CategoryService:
         return category
 
     def delete_category(self, user_id: int, category_id: int):
+        """
+        Deletes a custom category. Refuses (409) while any transaction still uses it, so a delete
+        can never silently take transactions with it.
+        """
 
         category = self.category_repository.get_by_id(category_id)
 
@@ -98,5 +103,11 @@ class CategoryService:
 
         if category.user_id != user_id:
             raise CategoryAccessDeniedException()
+
+        in_use = self.category_repository.count_transactions(category_id)
+        if in_use:
+            raise CategoryInUseException(
+                f"Category is used by {in_use} transaction(s). Move or delete them first."
+            )
 
         self.category_repository.delete(category=category)

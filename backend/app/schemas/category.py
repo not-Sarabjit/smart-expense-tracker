@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CategoryCreate(BaseModel):
@@ -43,5 +43,4 @@ class CategoryOut(BaseModel):
     user_id: int | None
 
     # So attributes from the objects can be fetched
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

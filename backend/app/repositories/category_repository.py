@@ -1,7 +1,8 @@
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.category import Category
+from app.models.transaction import Transaction
 
 
 class CategoryRepository:
@@ -14,7 +15,7 @@ class CategoryRepository:
         """
 
         statement = select(Category).where(
-            or_(Category.user_id == user_id, Category.user_id is None)
+            or_(Category.user_id == user_id, Category.user_id.is_(None))
         )
         return self.db.scalars(statement).all()
 
@@ -25,6 +26,13 @@ class CategoryRepository:
 
         statement = select(Category).where(Category.id == id)
         return self.db.scalars(statement).first()
+
+    def count_transactions(self, category_id: int) -> int:
+        """
+        Counts the transactions attached to a category (across all users, since defaults are shared)
+        """
+        statement = select(func.count(Transaction.id)).where(Transaction.category_id == category_id)
+        return self.db.scalar(statement)
 
     def create(self, name: str, category_type: str, user_id: int) -> Category:
         """

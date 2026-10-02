@@ -12,7 +12,7 @@ The module-level ``settings`` object is a deprecated back-compat shim.
 """
 
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -76,7 +76,7 @@ class LLMSettings(_GroupSettings):
 
     provider: str = "groq"
     model: str = "llama-3.3-70b-versatile"
-    api_key: Optional[str] = None
+    api_key: str | None = None
     temperature: float = 0.0
     timeout_seconds: int = 30
     max_retries: int = 2
@@ -108,7 +108,7 @@ class QdrantSettings(_GroupSettings):
     model_config = SettingsConfigDict(env_prefix="QDRANT_")
 
     url: str = "http://localhost:6333"
-    api_key: Optional[str] = None
+    api_key: str | None = None
     collection: str = "expense_docs"
 
 
@@ -165,7 +165,7 @@ class Settings(BaseSettings):
         return self.qdrant.url
 
     @property
-    def QDRANT_API_KEY(self) -> Optional[str]:  # noqa: N802
+    def QDRANT_API_KEY(self) -> str | None:  # noqa: N802
         return self.qdrant.api_key
 
     @property

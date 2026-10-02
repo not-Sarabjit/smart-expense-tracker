@@ -1,46 +1,3 @@
-import pytest
-
-
-def register_and_login(client, email, password="TestPass123!"):
-    """Helper: registers a user and returns their auth headers."""
-    client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "first_name": "Test",
-            "last_name": "User",
-            "password": password,
-        },
-    )
-    login = client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": password},
-    )
-    token = login.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-@pytest.fixture
-def user_a_headers(client):
-    return register_and_login(client, "usera@example.com")
-
-
-@pytest.fixture
-def user_b_headers(client):
-    return register_and_login(client, "userb@example.com")
-
-
-@pytest.fixture
-def category_id(client, user_a_headers):
-    """Creates a category for user A to attach transactions to."""
-    response = client.post(
-        "/api/v1/categories/create_category",
-        json={"name": "Groceries", "category_type": "expense"},
-        headers=user_a_headers,
-    )
-    return response.json()["id"]
-
-
 def test_create_expense_transaction(client, user_a_headers, category_id):
     response = client.post(
         "/api/v1/transactions",
@@ -59,7 +16,7 @@ def test_create_expense_transaction(client, user_a_headers, category_id):
     assert data["type"] == "expense"
 
 
-def test_create_income_transaction(client, user_a_headers, category_id):
+def test_create_income_transaction(client, user_a_headers, income_category_id):
     response = client.post(
         "/api/v1/transactions",
         json={
@@ -67,7 +24,7 @@ def test_create_income_transaction(client, user_a_headers, category_id):
             "type": "income",
             "description": "Paycheck",
             "date": "2026-08-01",
-            "category_id": category_id,
+            "category_id": income_category_id,
         },
         headers=user_a_headers,
     )

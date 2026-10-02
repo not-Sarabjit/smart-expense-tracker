@@ -1,6 +1,7 @@
 from datetime import date
+from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -16,6 +17,9 @@ from app.services.transaction_service import TransactionService
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
+MAX_PAGE_SIZE = 200
+TOTAL_COUNT_HEADER = "X-Total-Count"
+
 
 def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService:
     return TransactionService(
@@ -27,15 +31,14 @@ def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService
 # dynamic path parameter.
 @router.get("/summary")
 def get_summary(
-    year: int,
-    month: int,
+    year: int = Query(..., ge=1, le=9999),
+    month: int = Query(..., ge=1, le=12),
     current_user=Depends(get_current_user),
     service: TransactionService = Depends(get_transaction_service),
 ):
     """
-    Returns total income, total expense, and net total for the current user,
-    optionally scoped to a date range. Great demo endpoint - shows the app
-    doing something useful with one request.
+    Returns total income, total expense, and net total for the current user
+    for one calendar month, summed in the database.
     """
     return service.get_monthly_summary(
         user_id=current_user.id,
@@ -46,24 +49,40 @@ def get_summary(
 
 @router.get("", response_model=list[TransactionOut])
 def list_transactions(
-    transaction_type: str | None = Query(None, description="Filter by 'income' or 'expense'"),
+    response: Response,
+    transaction_type: Literal["income", "expense"] | None = Query(
+        None, description="Filter by 'income' or 'expense'"
+    ),
     category_id: int | None = Query(None, description="Filter by category"),
     start_date: date | None = Query(None),
     end_date: date | None = Query(None),
-    sort_by: str = Query("date", description="Field to sort by, e.g. 'date' or 'amount'"),
-    sort_order: str = Query("desc", description="'asc' or 'desc'"),
+    sort_by: Literal["date", "amount"] = Query("date", description="Field to sort by"),
+    sort_order: Literal["asc", "desc"] = Query("desc"),
+    limit: int = Query(50, ge=1, le=MAX_PAGE_SIZE, description="Page size"),
+    offset: int = Query(0, ge=0, description="Rows to skip"),
     current_user=Depends(get_current_user),
     service: TransactionService = Depends(get_transaction_service),
 ):
-    """List the current user's transactions, with optional filtering and sorting."""
+    """
+    List one page of the current user's transactions, with optional filtering and sorting.
+    The total number of matching rows is returned in the X-Total-Count header.
+    """
+    filters = {
+        "transaction_type": transaction_type,
+        "category_id": category_id,
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+    response.headers[TOTAL_COUNT_HEADER] = str(
+        service.count_transactions(user_id=current_user.id, **filters)
+    )
     return service.list_transactions(
         user_id=current_user.id,
-        transaction_type=transaction_type,
-        category_id=category_id,
-        start_date=start_date,
-        end_date=end_date,
         sort_by=sort_by,
         sort_order=sort_order,
+        limit=limit,
+        offset=offset,
+        **filters,
     )
 
 

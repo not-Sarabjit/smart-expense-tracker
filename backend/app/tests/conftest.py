@@ -51,3 +51,54 @@ def client(db):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+def register_and_login(client, email, password="TestPass123!"):
+    """Helper: registers a user and returns their auth headers."""
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "first_name": "Test",
+            "last_name": "User",
+            "password": password,
+        },
+    )
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": password},
+    )
+    token = login.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def user_a_headers(client):
+    return register_and_login(client, "usera@example.com")
+
+
+@pytest.fixture
+def user_b_headers(client):
+    return register_and_login(client, "userb@example.com")
+
+
+@pytest.fixture
+def category_id(client, user_a_headers):
+    """Creates an expense category for user A to attach transactions to."""
+    response = client.post(
+        "/api/v1/categories/create_category",
+        json={"name": "Groceries", "category_type": "expense"},
+        headers=user_a_headers,
+    )
+    return response.json()["id"]
+
+
+@pytest.fixture
+def income_category_id(client, user_a_headers):
+    """Creates an income category for user A."""
+    response = client.post(
+        "/api/v1/categories/create_category",
+        json={"name": "Paycheck", "category_type": "income"},
+        headers=user_a_headers,
+    )
+    return response.json()["id"]

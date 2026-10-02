@@ -74,8 +74,6 @@ known-first-party = ["app"]
 "backend/app/models/__init__.py" = ["F401"]
 # migrations/env.py imports models for side effects (Alembic autogenerate)
 "backend/migrations/env.py" = ["F401"]
-# B904: dead code that Step 0.4 will remove (bug B11)
-"backend/app/api/auth.py" = ["B904"]
 # UP042: TransactionType(str, Enum) — changing to StrEnum requires testing
 #        with SQLAlchemy/Alembic; will address when modernising models
 "backend/app/models/transaction.py" = ["UP042"]

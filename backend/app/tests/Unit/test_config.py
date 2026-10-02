@@ -7,7 +7,6 @@ from app.core.config import (
     AppSettings,
     AuthSettings,
     DatabaseSettings,
-    QdrantSettings,
     Settings,
     get_settings,
 )
@@ -48,10 +47,10 @@ def test_deprecated_flat_aliases_still_resolve(monkeypatch, fresh_settings):
 
     settings = get_settings()
 
-    assert settings.DATABASE_URL == settings.database.url
-    assert settings.SECRET_KEY == settings.auth.secret_key
-    assert settings.TOKEN_ALGORITHM == settings.auth.token_algorithm
-    assert settings.QDRANT_COLLECTION == settings.qdrant.collection
+    assert settings.database.url == settings.DATABASE_URL
+    assert settings.auth.secret_key == settings.SECRET_KEY
+    assert settings.auth.token_algorithm == settings.TOKEN_ALGORITHM
+    assert settings.qdrant.collection == settings.QDRANT_COLLECTION
 
 
 def test_defaults_are_applied(fresh_settings):

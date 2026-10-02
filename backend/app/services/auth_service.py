@@ -1,16 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from jose import jwt
 from passlib.context import CryptContext
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.core.exceptions import EmailAlreadyExistsException, InvalidCredentialsException
 from app.repositories.user_repository import UserRepository
-
-# Loading algorithm and secret key from env
-TOKEN_ALGORITHM = settings.TOKEN_ALGORITHM
-SECRET_KEY = settings.SECRET_KEY
-
 
 # For password hashing and verifying. rehashes using other algos if provided if one is deprecated
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -49,10 +44,19 @@ class AuthService:
         access_token = self._create_access_token(user.id)
         return access_token
 
-    def _create_access_token(self, user_id: int, expires_minutes: int = 60) -> str:
+    def _create_access_token(self, user_id: int, expires_minutes: int | None = None) -> str:
         """
-        Returns token in str
+        Returns token in str. `exp`/`iat` are timezone-aware UTC (JWT NumericDate is UTC seconds).
         """
-        expire = datetime.now() + timedelta(minutes=expires_minutes)
-        payload = {"sub": str(user_id), "exp": expire}
-        return jwt.encode(payload, SECRET_KEY, algorithm=TOKEN_ALGORITHM)
+        auth_settings = get_settings().auth
+        if expires_minutes is None:
+            expires_minutes = auth_settings.access_token_expire_minutes
+        now = datetime.now(UTC)
+        payload = {
+            "sub": str(user_id),
+            "iat": now,
+            "exp": now + timedelta(minutes=expires_minutes),
+        }
+        return jwt.encode(
+            payload, auth_settings.secret_key, algorithm=auth_settings.token_algorithm
+        )

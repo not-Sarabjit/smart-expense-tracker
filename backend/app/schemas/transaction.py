@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class TransactionBase(BaseModel):
@@ -44,7 +44,10 @@ class TransactionUpdate(BaseModel):
 
     amount: Decimal | None = None
     date: date_type | None = None
-    transaction_type: Literal["income", "expense"] | None = None
+    # Accepts "type" (same key as create/read) or the legacy "transaction_type"
+    transaction_type: Literal["income", "expense"] | None = Field(
+        default=None, validation_alias=AliasChoices("type", "transaction_type")
+    )
     category_id: int | None = None
     description: str | None = None
 
@@ -70,6 +73,5 @@ class TransactionOut(TransactionBase):
     created_at: datetime
     updated_at: datetime | None = None
 
-    # So Pydantic can read attributes from the user object
-    class Config:
-        from_attributes = True
+    # So Pydantic can read attributes from the ORM object
+    model_config = ConfigDict(from_attributes=True)

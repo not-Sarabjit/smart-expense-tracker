@@ -25,7 +25,6 @@ class Category(Base):
     # With User
     user = relationship("User", back_populates="custom_categories")
 
-    # With transactions
-    transactions = relationship(
-        "Transaction", back_populates="category", cascade="all, delete-orphan"
-    )
+    # With transactions. No delete cascade on purpose: deleting a category must never delete
+    # transactions. CategoryService.delete_category refuses while transactions still use it.
+    transactions = relationship("Transaction", back_populates="category")
