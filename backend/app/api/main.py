@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api import auth, category, transaction
+from app.api import auth, category, transaction, users
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppException
 from app.core.logging import setup_logging
@@ -113,3 +113,4 @@ API_PREFIX = "/api/v1"
 app.include_router(auth.router, prefix=API_PREFIX, tags=["Auth"])
 app.include_router(category.router, prefix=API_PREFIX, tags=["Categories"])
 app.include_router(transaction.router, prefix=API_PREFIX, tags=["Transactions"])
+app.include_router(users.router, prefix=API_PREFIX, tags=["Users"])

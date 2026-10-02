@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
-from app.models.transaction import Transaction, TransactionType
+from app.models.transaction import Transaction, TransactionSource, TransactionType
 
 CENTS = Decimal("0.01")
 
@@ -142,6 +142,7 @@ class TransactionRepository:
         date: date,
         user_id: int,
         category_id: int | None = None,
+        source: TransactionSource = TransactionSource.manual,
     ) -> Transaction:
 
         transaction = Transaction(
@@ -151,6 +152,7 @@ class TransactionRepository:
             date=date,
             user_id=user_id,
             category_id=category_id,
+            source=source,
         )
         self.db.add(transaction)
         self.db.flush()

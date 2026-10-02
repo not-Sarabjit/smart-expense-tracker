@@ -10,7 +10,7 @@ from app.core.exceptions import (
 )
 from app.database.unit_of_work import UnitOfWork
 from app.models.category import Category
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionSource
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.transaction_repository import TransactionRepository
 from app.utils.date_utils import last_day_of_month
@@ -74,6 +74,7 @@ class TransactionService:
         description: str,
         date: date,
         category_id: int,
+        source: TransactionSource = TransactionSource.manual,
     ) -> Transaction:
 
         with self.uow:
@@ -87,9 +88,15 @@ class TransactionService:
                 description=description,
                 date=date,
                 category_id=category_id,
+                source=source,
             )
 
-    def create_transactions(self, user_id: int, items: Iterable[dict]) -> list[Transaction]:
+    def create_transactions(
+        self,
+        user_id: int,
+        items: Iterable[dict],
+        source: TransactionSource = TransactionSource.manual,
+    ) -> list[Transaction]:
         """
         Creates several transactions atomically: every item is validated and inserted inside one
         DB transaction, so if any item fails nothing is saved. Each item takes the keyword
@@ -104,6 +111,7 @@ class TransactionService:
                     description=item.get("description"),
                     date=item["date"],
                     category_id=item.get("category_id"),
+                    source=source,
                 )
                 for item in items
             ]

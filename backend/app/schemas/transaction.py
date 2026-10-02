@@ -70,6 +70,7 @@ class TransactionOut(TransactionBase):
     """Schema for API responses. Reflects the full DB record."""
 
     id: int
+    source: Literal["manual", "chat", "import", "schedule"] = "manual"
     created_at: datetime
     updated_at: datetime | None = None
 

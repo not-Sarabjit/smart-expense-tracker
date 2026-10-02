@@ -21,6 +21,9 @@ dependencies = [
     "python-jose==3.5.0",
     "passlib==1.7.4",
     "bcrypt==4.0.1",
+
+    # IANA time zone database for zoneinfo (Windows has no system copy)
+    "tzdata==2025.2",
 ]
 
 [project.optional-dependencies]

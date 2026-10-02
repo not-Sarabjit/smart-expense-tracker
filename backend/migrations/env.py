@@ -10,8 +10,10 @@ from app.database.base import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-# Using the database url dynamically from env file coming from config settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Using the database url dynamically from env file coming from config settings.
+# "%" is escaped because Alembic's config is a ConfigParser (interpolation), and
+# URL-encoded passwords (e.g. "%23" for "#") would otherwise crash here.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

@@ -17,6 +17,12 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
+    # Preferences — the assistant needs both to format money and resolve "this month"
+    currency = Column(String(3), nullable=False, default="INR", server_default="INR")  # ISO 4217
+    timezone = Column(
+        String(64), nullable=False, default="Asia/Kolkata", server_default="Asia/Kolkata"
+    )  # IANA name
+
     # Relationship Definitions
 
     # With Transactions

@@ -24,9 +24,11 @@ class UserService:
         first_name: str | None = None,
         last_name: str | None = None,
         email: str | None = None,
+        currency: str | None = None,
+        timezone: str | None = None,
     ):
         """
-        Updates any of first_name, last_name and email if provided with user_id
+        Updates any of first_name, last_name, email, currency and timezone if provided with user_id
         """
 
         user = self.user_repository.get_by_id(user_id)
@@ -47,6 +49,12 @@ class UserService:
                 raise EmailAlreadyExistsException()
 
             updates["email"] = email
+
+        if currency is not None and currency != user.currency:
+            updates["currency"] = currency
+
+        if timezone is not None and timezone != user.timezone:
+            updates["timezone"] = timezone
 
         if updates:
             with self.uow:

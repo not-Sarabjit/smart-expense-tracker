@@ -43,7 +43,7 @@
 | Language | Python — CI uses **3.12**; local version not recorded | |
 | Database | **PostgreSQL** (installed locally, *not* in docker-compose), driver **psycopg2-binary 2.9.12** | Tests use **SQLite** (`backend/test.db`). |
 | ORM / migrations | **SQLAlchemy 2.0.51** (legacy `Column(...)` declarative style, `declarative_base()`), **Alembic 1.18.5** | Queries use 2.0-style `select()` mostly; `UserRepository` still uses legacy `db.query()`. |
-| Validation / config | **Pydantic 2.13.4**, **pydantic-settings 2.9.1**, email-validator | |
+| Validation / config | **Pydantic 2.13.4**, **pydantic-settings 2.9.1**, email-validator, **tzdata 2025.2** | tzdata gives `zoneinfo` an IANA database on Windows (used to validate `users.timezone`) |
 | Auth | JWT via **python-jose 3.5.0**, password hashing via **passlib 1.7.4 + bcrypt 4.0.1** | bcrypt is pinned to 4.0.1 because passlib breaks with newer bcrypt. |
 | Existing AI deps (unused) | groq 0.30.0, langchain-core 0.3.61, langchain-community 0.3.24, langchain-groq 0.3.2, langchain-qdrant 0.2.0, qdrant-client 1.14.2, sentence-transformers 4.1.0 | **No code imports these yet.** They're the pre-1.0 LangChain line; see §11. Now an optional `ai` dependency group (see below). |
 | Vector DB | **Qdrant** (docker-compose, ports 6333 REST / 6334 gRPC) | Config exists in `Settings`, no code uses it. |
@@ -72,8 +72,9 @@ smart-expense-tracker/
 │   ├── migrations/
 │   │   ├── env.py              # sets sqlalchemy.url from settings.DATABASE_URL; target_metadata = Base.metadata; `import app.models`
 │   │   └── versions/
-│   │       ├── 4eedc669f0a4_initial_schema.py        # users, categories, transactions
-│   │       └── 7fef2427edd8_add_default_categories.py # 18 default categories (HEAD)
+│   │       ├── 4eedc669f0a4_initial_schema.py        # users, categories, transactions (downgrade also drops PG enums)
+│   │       ├── 7fef2427edd8_add_default_categories.py # 18 default categories
+│   │       └── b3c1d2e4f5a6_ai_era_schema.py         # users.currency/timezone, transactions.updated_at/source/import_batch_id, indexes (HEAD)
 │   ├── conftest.py             # sets test env vars (DATABASE_URL, SECRET_KEY, …) before the app is imported
 │   ├── locustfile.py           # Load test: register → login → create/list transactions
 │   ├── test.db                 # SQLite test DB — untracked as of Step 0.1 (generated locally by pytest, in .gitignore)
@@ -83,7 +84,8 @@ smart-expense-tracker/
 │       │   ├── main.py         # app = FastAPI(...), CORS, logging middleware, exception handlers, routers, /health
 │       │   ├── auth.py         # /auth/register, /auth/login
 │       │   ├── category.py     # /categories/...
-│       │   └── transaction.py  # /transactions/...
+│       │   ├── transaction.py  # /transactions/...
+│       │   └── users.py        # /users/me (GET, PATCH)
 │       ├── core/
 │       │   ├── config.py       # Settings (pydantic-settings) → `settings` singleton
 │       │   ├── exceptions.py   # AppException + domain exceptions
@@ -118,6 +120,7 @@ smart-expense-tracker/
 │               ├── test_config.py
 │               ├── test_regressions.py   # one test (or more) per bug B1–B11
 │               ├── test_unit_of_work.py  # atomicity: failing 3rd insert rolls back the first two
+│               ├── test_users.py         # /users/me, preferences validation, source/updated_at
 │               └── test_transaction.py
 └── frontend/                   # see §10
 ```
@@ -262,9 +265,12 @@ Sync engine only; no async engine exists.
 | last_name | String | nullable |
 | hashed_password | String | not null |
 | created_at | DateTime | `server_default=now()` |
+| currency | String(3) | not null, default / server_default `'INR'` — ISO 4217, stored upper-case |
+| timezone | String(64) | not null, default / server_default `'Asia/Kolkata'` — IANA name, validated with `zoneinfo` |
 
 Relationships: `transactions` (cascade all, delete-orphan), `custom_categories` (cascade all, delete-orphan).
-**No profile/preferences columns** (no currency, timezone, locale).
+Read/update preferences via `GET/PATCH /api/v1/users/me`. For "today"/"this month" in the assistant, use
+`ZoneInfo(user.timezone)`.
 
 ### `categories` (`app/models/category.py`)
 | column | type | notes |
@@ -297,14 +303,24 @@ those transactions first (B3 decision, Step 0.4).
 | user_id | FK → users.id `ON DELETE CASCADE` | not null |
 | category_id | FK → categories.id | nullable, no ON DELETE rule at DB level |
 | created_at | DateTime | `server_default=now()` |
+| updated_at | DateTime | not null, `server_default=now()`, ORM `onupdate=now()`; backfilled from `created_at` |
+| source | Enum `TransactionSource` (PG enum `transaction_source`: `manual`\|`chat`\|`import`\|`schedule`) | not null, default `manual`. Python member for "import" is `TransactionSource.import_` (`values_callable` stores values) |
+| import_batch_id | Integer | nullable; **no FK yet** (FK to `import_batches` added in Phase 8) |
 
-**No** `updated_at` column (the schema returns `updated_at: null` always), no merchant/account/currency/source
-columns, no soft-delete, **no index on `user_id` or `date`**.
+Indexes: `ix_transactions_id`, **`ix_transactions_user_id_date (user_id, date)`**,
+**`ix_transactions_user_id_category_id (user_id, category_id)`**. No merchant/account/currency columns, no soft-delete.
 
-Enum class: `from app.models.transaction import TransactionType`.
+Enum classes: `from app.models.transaction import TransactionType, TransactionSource`.
+`TransactionRepository.create(..., source=TransactionSource.manual)`; `TransactionService.create_transaction(...,
+source=...)` and `create_transactions(user_id, items, source=...)` pass it through (API writes are `manual`; chat
+tools must pass `chat`, imports `import_`, schedules `schedule`).
 
-**Migration head:** `7fef2427edd8`. New migrations: `alembic revision --autogenerate -m "..."` from `backend/`
+**Migration head:** `b3c1d2e4f5a6`. New migrations: `alembic revision --autogenerate -m "..."` from `backend/`
 (env.py imports `app.models`, so **new model modules must be imported in `app/models/__init__.py`** to be seen).
+`alembic check` reports no drift between models and migrations. Migration rules used so far: additive only, new
+columns nullable or with a server default, `op.add_column` with a PG enum needs an explicit
+`<enum>.create(op.get_bind(), checkfirst=True)` (and `.drop` in downgrade). `migrations/env.py` escapes `%` in the
+URL (URL-encoded passwords).
 
 ---
 
@@ -321,7 +337,10 @@ Enum class: `from app.models.transaction import TransactionType`.
    Failure → 401 `{"detail": "Could not validate credentials"}`.
 4. Frontend stores the token in `localStorage["access_token"]` and sends `Authorization: Bearer <token>`.
 
-Not present: refresh tokens, logout/revocation, `/users/me`, roles, rate limiting, account lockout.
+5. `GET /api/v1/users/me` returns the profile incl. `currency`/`timezone`; `PATCH /api/v1/users/me` updates
+   `first_name`, `last_name`, `currency`, `timezone` (email is not editable there).
+
+Not present: refresh tokens, logout/revocation, roles, rate limiting, account lockout.
 
 **Reuse for new endpoints:** `current_user: User = Depends(get_current_user)` then use `current_user.id`.
 For SSE/streaming endpoints the same header-based auth works (the frontend must use `fetch`, not `EventSource`,
@@ -335,8 +354,10 @@ Base: `http://localhost:8000/api/v1`. All except auth require `Authorization: Be
 
 | Method & path | Input | Output | Behaviour / rules |
 |---|---|---|---|
-| POST `/auth/register` | `{email, first_name, last_name, password}` | 201 `UserOut {id, email, first_name, last_name, created_at}` | 409 if email exists |
+| POST `/auth/register` | `{email, first_name, last_name, password}` | 201 `UserOut {id, email, first_name, last_name, currency, timezone, created_at}` | 409 if email exists |
 | POST `/auth/login` | `{email, password}` | `{access_token, token_type}` | 401 on bad creds |
+| GET `/users/me` | – | `UserOut` | current user's profile + preferences |
+| PATCH `/users/me` | `UserPreferencesUpdate {first_name?, last_name?, currency?, timezone?}` | `UserOut` | currency: 3 letters (upper-cased) else 422; timezone: valid IANA name else 422; blank first_name 422; unknown fields (e.g. email) ignored |
 | GET `/categories/` | – | `CategoryOut[] {id, name, category_type, user_id}` | defaults (`user_id=null`) + user's custom |
 | GET `/categories/{id}` | – | `CategoryOut` | 404 / 403 if another user's custom |
 | POST `/categories/create_category` | `{name, category_type}` | 201 `CategoryOut` | name stripped, non-empty; 409 on case-insensitive duplicate (incl. defaults) |
@@ -352,7 +373,8 @@ Base: `http://localhost:8000/api/v1`. All except auth require `Authorization: Be
 `TransactionOut` JSON example (note `amount` is a **string** because it's `Decimal`):
 ```json
 {"amount": "42.50", "date": "2026-08-01", "type": "expense", "category_id": 3,
- "description": "Weekly groceries", "id": 17, "created_at": "2026-08-01T10:22:31", "updated_at": null}
+ "description": "Weekly groceries", "id": 17, "source": "manual",
+ "created_at": "2026-08-01T10:22:31", "updated_at": "2026-08-01T10:22:31"}
 ```
 
 ---
@@ -414,7 +436,8 @@ class CategoryService(category_repository, uow):
 
 # app/services/auth_service.py  — AuthService(user_repository, uow): register(...), login(email, password) -> token
 #   JWT payload {"sub", "iat", "exp"}; iat/exp are UTC-aware; lifetime = settings.auth.access_token_expire_minutes
-# app/services/user_service.py  — UserService(user_repository, uow): get_profile, update_profile  (no router uses it)
+# app/services/user_service.py  — UserService(user_repository, uow): get_profile(user_id),
+#   update_profile(user_id, first_name=None, last_name=None, email=None, currency=None, timezone=None)  — used by api/users.py
 ```
 
 AI tools should call **services** (so business rules are reused), never repositories directly, and always pass
@@ -516,9 +539,9 @@ AI tools should call **services** (so business rules are reused), never reposito
 | ~~B12~~ | **Resolved in Step 0.4** — `CategoryRepository.get_all_for_user` used `Category.user_id is None` (Python identity → always False), so **default categories were never listed** and the duplicate check ignored them. Now `.is_(None)`. | |
 | ~~G1~~ | ~~`requirements.txt` is UTF-16 LE/CRLF...~~ **Resolved in Step 0.1** — migrated to `pyproject.toml` (UTF-8) + `uv.lock`; deps split into core/`ai`/`dev` groups; Ruff added. | repo root |
 | ~~G2~~ | **Resolved in Step 0.6** — repositories flush; `UnitOfWork` in services owns commit/rollback. | |
-| G3 | No indexes on `transactions(user_id, date)` / `(user_id, category_id)`. | model/migration |
-| G4 | No user preferences (currency, timezone) — the agent needs both to interpret "this month" and format money. | `users` |
-| G5 | No `/users/me`; FE relies on localStorage profile set at register. | auth |
+| ~~G3~~ | **Resolved in Step 0.7** — `ix_transactions_user_id_date`, `ix_transactions_user_id_category_id`. | |
+| ~~G4~~ | **Resolved in Step 0.7** — `users.currency` / `users.timezone`. | |
+| ~~G5~~ | **Resolved in Step 0.7 (BE)** — `GET/PATCH /users/me`. | |
 | G6 | No request IDs, structured logs, tracing, metrics, rate limiting, Redis, background jobs, object storage. | – |
 | G7 | ~~`test.db` committed~~ **Partially resolved in Step 0.1** — removed from git tracking, added to `.gitignore` (file still exists locally, generated by pytest). `Settings` still needs env vars even for tests. | tests |
 | G8 | Postgres not in docker-compose (unused `postgres_data` volume declared). | docker-compose |
