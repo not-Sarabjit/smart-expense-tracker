@@ -64,6 +64,7 @@ smart-expense-tracker/
 ├── uv.lock                     # pinned transitive deps — committed
 ├── docker-compose.yml          # Only a `qdrant` service. Declares an unused `postgres_data` volume.
 ├── README.md                   # One line: "FastAPI + PostgreSQL expense tracking API with AI-assisted categorization."
+├── docs/adr/                   # Architecture Decision Records: README.md (index + template), 0001-ai-assistant-architecture.md
 ├── .gitignore                  # includes backend/test.db
 ├── .github/workflows/tests.yml # uv sync --locked --extra dev --extra ai, ruff check + format --check, AI import check, pytest
 ├── .kiro/specs/smart-expense-tracker-frontend/   # Kiro spec-driven docs (requirements/design/tasks) for the frontend
@@ -587,7 +588,9 @@ AI tools should call **services** (so business rules are reused), never reposito
 
 ## 13. Decisions already made for the AI feature
 
-Agreed during planning (details and order live in `AI_TRACKER.md`):
+Agreed during planning (details and order live in `AI_TRACKER.md`). Recorded formally, with alternatives and
+consequences, in **`docs/adr/0001-ai-assistant-architecture.md`** — add ADR 0002+ for later significant decisions
+(e.g. tracing backend in 2.1, checkpoint vs `messages` table as source of truth in 4.1):
 
 - **Goal:** a Rovo-style agentic chat assistant: natural-language CRUD on transactions/categories, dynamic
   questions over the user's data (with clarifying questions), bulk analysis/insights, document upload

@@ -138,7 +138,7 @@ deleting a category silently deletes transactions, an agent will do it at scale.
   - **Concepts:** configuration as code, feature flags, dependency injection of config.
   - **Done when:** app runs with the new settings; tests override settings without real env vars.
 
-- [ ] **0.4 [BE] Fix confirmed backend bugs + regression tests**
+- [x] **0.4 [BE] Fix confirmed backend bugs + regression tests**
   - **Goal:** fix B1 (type update crash), B2 (summary → SQL `SUM … GROUP BY type`), **B3 (category delete — decide:
     block if in use, or re-assign transactions to "Uncategorised"/NULL)**, B5 (category ownership on update),
     B6 (category type vs transaction type), B7 (pagination `limit/offset` + validated `sort_by`), B8 (don't leak
@@ -146,18 +146,18 @@ deleting a category silently deletes transactions, an agent will do it at scale.
   - **Concepts:** regression tests, aggregation in the database vs Python, safe error responses.
   - **Done when:** every bug in PROJECT_CONTEXT §12 table B1–B11 has a test that failed before and passes now.
 
-- [ ] **0.5 [FE] Fix frontend mismatches**
+- [x] **0.5 [FE] Fix frontend mismatches**
   - **Goal:** B4 summary keys, `amount` string→number handling, nullable `Category.user_id`, pagination support.
   - **Done when:** dashboard cards show correct totals.
 
-- [ ] **0.6 [BE] Unit of work (transaction boundaries)**
+- [x] **0.6 [BE] Unit of work (transaction boundaries)**
   - **Goal:** let a service run several writes in **one DB transaction** (repositories `flush()`, the service/UoW
     decides `commit()`/`rollback()`), without breaking existing endpoints. Discuss options (UoW class vs
     `commit=` flag vs session-per-request commit) and pick one.
   - **Concepts:** ACID, atomicity, unit-of-work pattern — needed for bulk imports and multi-step agent actions.
   - **Done when:** a test proves a failing 3rd insert rolls back the first two.
 
-- [ ] **0.7 [BE] Schema for the AI era**
+- [x] **0.7 [BE] Schema for the AI era**
   - **Goal:** Alembic migration adding `users.currency` (default `INR`), `users.timezone` (default
     `Asia/Kolkata`), `transactions.updated_at`, `transactions.source` (`manual|chat|import|schedule`),
     `transactions.import_batch_id` (nullable, FK added in Phase 8), indexes on `(user_id, date)` and
@@ -165,23 +165,23 @@ deleting a category silently deletes transactions, an agent will do it at scale.
   - **Concepts:** migrations in production (additive, backwards-compatible), provenance/auditability, indexes.
   - **Done when:** `alembic upgrade head` and `downgrade -1` both work; `/users/me` returns currency & timezone.
 
-- [ ] **0.8 [FE] Profile & preferences**
+- [x] **0.8 [FE] Profile & preferences**
   - **Goal:** use `/users/me` instead of localStorage profile; settings screen for currency & timezone.
 
-- [ ] **0.9 [BE] Structured logging & request IDs**
+- [x] **0.9 [BE] Structured logging & request IDs**
   - **Goal:** **structlog** JSON logs; middleware that assigns/propagates `X-Request-ID`; `request_id` and `user_id`
     bound via `contextvars` so every log line in a request carries them.
   - **Concepts:** structured logging, correlation IDs, contextvars — the base of all AI debugging later.
   - **Done when:** one request's log lines can be filtered by its request id.
 
-- [ ] **0.10 [BE] Upgrade the AI stack**
+- [x] **0.10 [BE] Upgrade the AI stack**
   - **Goal:** replace the unused 0.3.x packages with LangChain 1.x / LangGraph 1.x, langchain-groq,
     langchain-qdrant, qdrant-client (versions in PROJECT_CONTEXT §11); drop what isn't needed; keep heavy deps
     (torch via sentence-transformers) out of the default CI install.
   - **Concepts:** semantic versioning, breaking changes, keeping CI fast.
   - **Done when:** `python -c "import langgraph, langchain_groq"` works; CI stays green and fast.
 
-- [ ] **0.11 [BE] Architecture Decision Record**
+- [x] **0.11 [BE] Architecture Decision Record**
   - **Goal:** `docs/adr/0001-ai-assistant-architecture.md` — context, decision (PROJECT_CONTEXT §13), alternatives
     considered (raw text-to-SQL, pure RAG, hand-rolled loop, CrewAI…), consequences.
   - **Concepts:** ADRs / design docs — how senior engineers justify decisions (great interview material).
