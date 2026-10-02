@@ -21,17 +21,24 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
-      - name: Install dependencies (core + dev only, no AI deps)
-        run: uv sync --extra dev
+      # core + dev + ai (LangChain/LangGraph, no torch). The heavy `embeddings`
+      # extra (sentence-transformers -> torch) is deliberately not installed.
+      - name: Install dependencies
+        run: uv sync --locked --extra dev --extra ai
 
       - name: Lint
-        run: uv run ruff check backend/
+        run: |
+          uv run ruff check backend/
+          uv run ruff format backend/ --check
 
+      - name: AI stack imports
+        run: uv run python -c "import langgraph, langchain_groq"
+
+      # The suite needs no secrets: backend/conftest.py provides test defaults
+      # and the tests run against SQLite.
       - name: Run pytest
         working-directory: backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          TOKEN_ALGORITHM: HS256
         run: uv run pytest -v

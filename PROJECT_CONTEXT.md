@@ -45,11 +45,11 @@
 | ORM / migrations | **SQLAlchemy 2.0.51** (legacy `Column(...)` declarative style, `declarative_base()`), **Alembic 1.18.5** | Queries use 2.0-style `select()` mostly; `UserRepository` still uses legacy `db.query()`. |
 | Validation / config | **Pydantic 2.13.4**, **pydantic-settings 2.9.1**, email-validator, **tzdata 2025.2** | tzdata gives `zoneinfo` an IANA database on Windows (used to validate `users.timezone`) |
 | Auth | JWT via **python-jose 3.5.0**, password hashing via **passlib 1.7.4 + bcrypt 4.0.1** | bcrypt is pinned to 4.0.1 because passlib breaks with newer bcrypt. |
-| Existing AI deps (unused) | groq 0.30.0, langchain-core 0.3.61, langchain-community 0.3.24, langchain-groq 0.3.2, langchain-qdrant 0.2.0, qdrant-client 1.14.2, sentence-transformers 4.1.0 | **No code imports these yet.** They're the pre-1.0 LangChain line; see §11. Now an optional `ai` dependency group (see below). |
+| AI deps (optional extras) | `ai`: **langchain 1.4.3, langchain-core 1.6.6, langgraph 1.2.12, langchain-groq 1.1.3** (pulls groq 0.30.0), **langchain-qdrant 1.1.0, qdrant-client 1.19.1**. `embeddings`: **sentence-transformers 6.1.0** (pulls torch) | Upgraded in Step 0.10. No app code imports them yet (only `test_ai_stack.py`). `langchain-community` dropped. |
 | Vector DB | **Qdrant** (docker-compose, ports 6333 REST / 6334 gRPC) | Config exists in `Settings`, no code uses it. |
 | Logging | **structlog 26.1.0** | JSON lines with `request_id` / `user_id` (Step 0.9), see §4.2 |
 | Tests | pytest 9.1.1, httpx 0.27.2 (TestClient), locust 2.46.4 (load test) | |
-| Dependency management | **uv** + `pyproject.toml` | `uv.lock` committed; deps split into core, `ai` (optional), `dev` (optional) |
+| Dependency management | **uv** + `pyproject.toml` | `uv.lock` committed; deps split into core and optional `ai` (light agent stack), `embeddings` (heavy, torch), `dev` |
 | Linter / formatter | **Ruff** ≥0.7.0 | Config in `pyproject.toml [tool.ruff]`; also sets `pythonpath=["backend"]` for pytest (see §9) |
 | CI | GitHub Actions `.github/workflows/tests.yml` | |
 | Frontend | React 18 + TypeScript 5.6 + Vite 5 + Tailwind 3, axios, recharts, react-router-dom 7, vitest + Testing Library + fast-check | See §10. |
@@ -60,12 +60,12 @@
 
 ```
 smart-expense-tracker/
-├── pyproject.toml              # deps (core + optional ai/dev), ruff config, pytest config (pythonpath=["backend"])
+├── pyproject.toml              # deps (core + optional ai/embeddings/dev), ruff config, pytest config (pythonpath=["backend"])
 ├── uv.lock                     # pinned transitive deps — committed
 ├── docker-compose.yml          # Only a `qdrant` service. Declares an unused `postgres_data` volume.
 ├── README.md                   # One line: "FastAPI + PostgreSQL expense tracking API with AI-assisted categorization."
 ├── .gitignore                  # includes backend/test.db
-├── .github/workflows/tests.yml # uv sync --extra dev, ruff check, uv run pytest (was: pip install -r requirements.txt)
+├── .github/workflows/tests.yml # uv sync --locked --extra dev --extra ai, ruff check + format --check, AI import check, pytest
 ├── .kiro/specs/smart-expense-tracker-frontend/   # Kiro spec-driven docs (requirements/design/tasks) for the frontend
 ├── .vscode/settings.json
 ├── backend/
@@ -151,12 +151,12 @@ QDRANT_COLLECTION=expense_docs
 
 | Task | Command |
 |---|---|
-| Install deps | from repo root: `uv sync --extra dev` (add `--extra ai` to also install the unused AI deps) |
+| Install deps | from repo root: `uv sync --extra dev --extra ai` (what CI installs). Add `--extra embeddings` only when you need local embedding models (downloads torch). Note `uv sync` removes extras you don't list. |
 | Migrate DB | from `backend/`: `alembic upgrade head` |
 | Run API | from `backend/`: `uvicorn app.api.main:app --reload` → http://localhost:8000, Swagger at `/docs` |
 | Health | `GET /health` → `{"status":"ok"}` (no `/api/v1` prefix) |
 | Lint | from repo root: `ruff check backend/` and `ruff format backend/ --check` |
-| Tests | from `backend/`: `uv run pytest -v` (needs `DATABASE_URL`, `SECRET_KEY`, `TOKEN_ALGORITHM` set because `Settings()` runs at import; tests themselves use SQLite) |
+| Tests | from `backend/`: `uv run pytest -v` (no env vars needed — `backend/conftest.py` sets test defaults; tests use SQLite). `test_ai_stack.py` is skipped if the `ai` extra isn't installed. |
 | Qdrant | from repo root: `docker compose up -d qdrant` |
 | Frontend | from `frontend/`: `npm install && npm run dev` → http://localhost:3000 (Vite proxies `/api` → `http://localhost:8000`) |
 | Load test | from `backend/`: `locust` |
@@ -483,9 +483,9 @@ AI tools should call **services** (so business rules are reused), never reposito
   `app/tests/conftest.py`) so only committed data is visible — reuse that pattern for atomicity tests.
 - `pyproject.toml [tool.pytest.ini_options]` sets `pythonpath = ["backend"]` so bare `pytest` / `uv run pytest`
   resolves `import app...`.
-- CI: GitHub Actions, Python 3.12, `uv sync --extra dev` (core + dev only — skips the `ai` extras, so no
-  sentence-transformers/torch download), then `ruff check backend/`, then `uv run pytest -v` in `backend/` with
-  `DATABASE_URL`/`SECRET_KEY` from repo secrets.
+- CI: GitHub Actions, Python 3.12, uv with cache, `uv sync --locked --extra dev --extra ai` (no `embeddings` extra →
+  no torch download), `ruff check backend/` + `ruff format backend/ --check`,
+  `python -c "import langgraph, langchain_groq"`, then `uv run pytest -v` in `backend/`. No secrets needed.
 - `ruff check backend/` and `ruff format backend/ --check` are both clean.
 
 ---
@@ -535,15 +535,19 @@ AI tools should call **services** (so business rules are reused), never reposito
 
 ## 11. Existing AI groundwork
 
-- Deps listed under the `ai` optional group in `pyproject.toml` but **unused**: groq, langchain-core/community/groq
-  (0.3.x), langchain-qdrant, qdrant-client, sentence-transformers.
+- **Step 0.10 upgraded the stack** to LangChain 1.x / LangGraph 1.x (versions in §1): optional extra `ai` (light,
+  installed in CI) and `embeddings` (sentence-transformers → torch, never in CI). `langchain-community` and the
+  0.3.x line are gone. Still no app code imports them; `app/tests/Unit/test_ai_stack.py` proves a LangGraph
+  `StateGraph` compiles/runs and `ChatGroq` constructs offline. Write new code against the 1.x APIs
+  (`langgraph.graph.StateGraph`, `START`/`END`, `langchain_groq.ChatGroq`, `langchain_qdrant.QdrantVectorStore`).
 - Qdrant settings in `Settings` and a Qdrant container in `docker-compose.yml`.
 - README mentions "AI-assisted categorization" — **not implemented**.
 - Versions available on PyPI as of 2026-09-30 (for the upgrade step): langchain 1.4.3, langchain-core 1.6.6,
   langgraph 1.2.12, langchain-groq 1.1.3, langchain-qdrant 1.1.0, langgraph-checkpoint-postgres 3.1.2,
   qdrant-client 1.19.1, sentence-transformers 6.1.0, celery 5.6.3, celery-redbeat 2.4.2, redis 8.1.0,
   langfuse 4.16.0, docling 2.131.0, sqlglot 30.20.0, sse-starlette 3.5.0, psycopg 3.3.6, fastapi 0.142.2.
-  The repo's 0.3.x LangChain line predates LangChain/LangGraph 1.0 and should be upgraded, not built on.
+  Not yet added (later phases): langgraph-checkpoint-postgres, psycopg 3, celery, celery-redbeat, redis, langfuse,
+  docling, sqlglot, sse-starlette.
 
 ---
 

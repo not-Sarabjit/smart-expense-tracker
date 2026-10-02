@@ -31,16 +31,17 @@ dependencies = [
 
 [project.optional-dependencies]
 ai = [
-    # These are the UNUSED pre-1.0 LangChain deps from the original repo.
-    # Step 0.10 will upgrade them to LangChain/LangGraph 1.x.
-    # Kept here so `uv sync --extra ai` reproduces the original environment.
-    "groq==0.30.0",
-    "langchain-core==0.3.61",
-    "langchain-community==0.3.24",
-    "langchain-groq==0.3.2",
-    "langchain-qdrant==0.2.0",
-    "qdrant-client==1.14.2",
-    "sentence-transformers==4.1.0",
+    # Agent stack (LangChain / LangGraph 1.x). Light: no torch. Installed in CI.
+    "langchain==1.4.3",
+    "langchain-core==1.6.6",
+    "langgraph==1.2.12",
+    "langchain-groq==1.1.3",     # brings the groq SDK
+    "langchain-qdrant==1.1.0",
+    "qdrant-client==1.19.1",
+]
+embeddings = [
+    # Local embedding models. Heavy (pulls torch) — kept out of CI and the default install.
+    "sentence-transformers==6.1.0",
 ]
 dev = [
     "pytest==9.1.1",
