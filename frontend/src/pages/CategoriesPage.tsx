@@ -7,7 +7,6 @@ import ConfirmModal from "../components/ui/ConfirmModal";
 import EmptyState from "../components/ui/EmptyState";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import axios from "axios";
-import Navbar from "../components/layout/Navbar";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -203,7 +202,6 @@ export default function CategoriesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Navbar />
 
       <main className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Page heading */}

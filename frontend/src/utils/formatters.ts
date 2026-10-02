@@ -27,3 +27,22 @@ export function formatDate(isoString: string): string {
     day: "numeric",
   });
 }
+
+/**
+ * Formats an amount in the given ISO 4217 currency, e.g. formatMoney(1234.5, "INR") → "₹1,234.50".
+ * Falls back to "<CODE> 1,234.50" if the runtime doesn't know the currency code.
+ * @param amount - The numeric amount to format
+ * @param currency - ISO 4217 currency code (the user's preference from /users/me)
+ */
+export function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return formatCurrency(amount, `${currency} `);
+  }
+}

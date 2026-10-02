@@ -136,7 +136,10 @@ describe('AuthPage — Register mode', () => {
   });
 
   it('calls register then auto-login and navigates to /dashboard on success', async () => {
-    const user = { id: 1, email: 'new@example.com', first_name: 'Alice', last_name: 'Smith', created_at: '' };
+    const user = {
+      id: 1, email: 'new@example.com', first_name: 'Alice', last_name: 'Smith',
+      currency: 'INR', timezone: 'Asia/Kolkata', created_at: '',
+    };
     vi.mocked(authApi.register).mockResolvedValue(user);
     vi.mocked(authApi.login).mockResolvedValue({ access_token: 'new-token' });
 

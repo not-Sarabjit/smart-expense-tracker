@@ -1,6 +1,8 @@
 import * as authApi from "../api/auth";
 import type { RegisterPayload } from "../api/auth";
-import type { User } from "../types";
+
+/** Legacy key from before GET /users/me existed — only removed now, never written. */
+const LEGACY_PROFILE_KEY = "user_profile";
 
 /**
  * Custom hook that provides authentication helpers.
@@ -10,29 +12,22 @@ import type { User } from "../types";
 export function useAuth() {
   /**
    * Log in with email + password.
-   * Stores access_token and user_profile in localStorage on success.
+   * Stores access_token in localStorage on success; the profile itself is
+   * loaded from GET /users/me by CurrentUserProvider.
    * Throws on API error so the caller can surface it.
    */
   async function login(email: string, password: string): Promise<void> {
     const { access_token } = await authApi.login(email, password);
     localStorage.setItem("access_token", access_token);
-    // login endpoint only returns the token; user_profile may have been
-    // stored already during register. If not, store null to keep keys in sync.
-    if (!localStorage.getItem("user_profile")) {
-      localStorage.setItem("user_profile", "null");
-    }
+    localStorage.removeItem(LEGACY_PROFILE_KEY);
   }
 
   /**
    * Register a new account, then automatically log in with the same credentials.
-   * Stores the User returned by the register endpoint so the Navbar can display
-   * the user's name without a separate /users/me call.
    * Throws on API error so the caller can surface it.
    */
   async function register(payload: RegisterPayload): Promise<void> {
-    const user: User = await authApi.register(payload);
-    // Persist user profile before login so login() can find it.
-    localStorage.setItem("user_profile", JSON.stringify(user));
+    await authApi.register(payload);
     // Auto-login with same credentials.
     await login(payload.email, payload.password);
   }
@@ -42,7 +37,7 @@ export function useAuth() {
    */
   function logout(): void {
     localStorage.removeItem("access_token");
-    localStorage.removeItem("user_profile");
+    localStorage.removeItem(LEGACY_PROFILE_KEY);
   }
 
   /**

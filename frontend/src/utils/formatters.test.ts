@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatCurrency, formatDate } from './formatters';
+import { formatCurrency, formatDate, formatMoney } from './formatters';
 
 describe('formatCurrency', () => {
   it('formats zero with two decimal places', () => {
@@ -55,5 +55,17 @@ describe('formatDate', () => {
   it('does not shift dates due to timezone offset', () => {
     // "2025-03-15" should always be Mar 15, not Mar 14 in any timezone
     expect(formatDate('2025-03-15')).toBe('Mar 15, 2025');
+  });
+});
+
+describe("formatMoney", () => {
+  it("formats in the given ISO currency", () => {
+    expect(formatMoney(1234.5, "INR")).toBe("₹1,234.50");
+    expect(formatMoney(1234.5, "USD")).toBe("$1,234.50");
+    expect(formatMoney(-15, "EUR")).toBe("-€15.00");
+  });
+
+  it("falls back to the code for an unknown currency", () => {
+    expect(formatMoney(5, "NOTACODE")).toBe("NOTACODE 5.00");
   });
 });

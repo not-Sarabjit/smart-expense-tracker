@@ -1,7 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
+
+// CurrentUserProvider calls GET /users/me — keep tests offline
+vi.mock('../../api/users', () => ({
+  getMe: vi.fn().mockResolvedValue({
+    id: 1, email: 'a@b.com', first_name: 'Ada', last_name: 'L',
+    currency: 'INR', timezone: 'Asia/Kolkata', created_at: '2026-01-01T00:00:00',
+  }),
+  updateMe: vi.fn(),
+}));
 
 // Helper: renders a MemoryRouter pointing at `initialPath` with the full
 // route tree: protected group + /login public route.

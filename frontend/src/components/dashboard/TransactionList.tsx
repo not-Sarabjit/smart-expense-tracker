@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Transaction, Category } from "@/types";
-import { formatCurrency, formatDate } from "@/utils/formatters";
+import { formatMoney, formatDate } from "@/utils/formatters";
+import { useCurrency } from "@/hooks/useCurrentUser";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -43,6 +44,8 @@ export function TransactionList({
   onEdit,
   onDelete,
 }: TransactionListProps) {
+  const currency = useCurrency();
+
   // Build a fast lookup map: category id → name
   const categoryMap = new Map<number, string>(
     categories.map((c) => [c.id, c.name])
@@ -174,7 +177,7 @@ export function TransactionList({
                          bg-white dark:bg-gray-800
                          hover:bg-gray-50 dark:hover:bg-gray-700/50
                          cursor-pointer transition-colors"
-              aria-label={`Edit transaction: ${formatDate(tx.date)}, ${tx.description ?? "no description"}, ${categoryName}, ${formatCurrency(tx.amount)}`}
+              aria-label={`Edit transaction: ${formatDate(tx.date)}, ${tx.description ?? "no description"}, ${categoryName}, ${formatMoney(tx.amount, currency)}`}
             >
               {/* Mobile layout (< sm): stacked two-line card */}
               <div className="flex items-center justify-between px-4 py-3 sm:hidden gap-3">
@@ -188,7 +191,7 @@ export function TransactionList({
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={`text-sm font-semibold ${amountClass}`}>
-                    {formatCurrency(tx.amount)}
+                    {formatMoney(tx.amount, currency)}
                   </span>
                   {/* Delete button */}
                   <button
@@ -243,7 +246,7 @@ export function TransactionList({
 
                 {/* Amount */}
                 <span className={`text-sm font-medium text-right ${amountClass}`}>
-                  {formatCurrency(tx.amount)}
+                  {formatMoney(tx.amount, currency)}
                 </span>
 
                 {/* Delete button (Req 10.1) */}

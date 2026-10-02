@@ -33,7 +33,7 @@ describe("TransactionList", () => {
       />
     );
 
-    expect(screen.getAllByText("$42.50").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("₹42.50").length).toBeGreaterThan(0);
   });
 
   it("shows the server total and reveals more rows on demand", async () => {

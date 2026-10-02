@@ -5,8 +5,18 @@ export interface User {
   id: number;
   email: string;
   first_name: string;
-  last_name: string;
+  last_name: string | null;
+  currency: string; // ISO 4217, e.g. "INR"
+  timezone: string; // IANA, e.g. "Asia/Kolkata"
   created_at: string; // ISO 8601
+}
+
+/** PATCH /users/me body — only the fields sent are changed (email is not editable). */
+export interface UserPreferencesUpdatePayload {
+  first_name?: string;
+  last_name?: string;
+  currency?: string;
+  timezone?: string;
 }
 
 export interface Category {

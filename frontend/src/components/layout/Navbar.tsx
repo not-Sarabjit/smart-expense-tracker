@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { applyTheme } from "../../utils/theme";
-import type { User } from "../../types";
 
 /**
  * Top navigation bar rendered on all authenticated pages.
@@ -13,19 +13,9 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  // Resolve display name from localStorage — fall back to empty string (Req 4.2)
-  const rawProfile = localStorage.getItem("user_profile");
-  let displayName = "";
-  if (rawProfile && rawProfile !== "null") {
-    try {
-      const profile = JSON.parse(rawProfile) as User;
-      const firstName = profile.first_name ?? "";
-      const lastName = profile.last_name ?? "";
-      displayName = `${firstName} ${lastName}`.trim();
-    } catch {
-      displayName = "";
-    }
-  }
+  // Display name from GET /users/me — empty until the profile loads (Req 4.2)
+  const { user } = useCurrentUser();
+  const displayName = user ? `${user.first_name} ${user.last_name ?? ""}`.trim() : "";
 
   // Hamburger menu state for mobile (Req 4.10, 4.11)
   const [menuOpen, setMenuOpen] = useState(false);
@@ -113,6 +103,12 @@ export default function Navbar() {
             >
               Categories
             </Link>
+            <Link
+              to="/settings"
+              className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm transition-colors"
+            >
+              Settings
+            </Link>
 
             {/* Dark / light mode toggle (Req 4.6, 4.7, 4.8) */}
             <button
@@ -186,6 +182,13 @@ export default function Navbar() {
             onClick={() => setMenuOpen(false)}
           >
             Categories
+          </Link>
+          <Link
+            to="/settings"
+            className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm"
+            onClick={() => setMenuOpen(false)}
+          >
+            Settings
           </Link>
 
           {/* Dark / light mode toggle in mobile menu */}

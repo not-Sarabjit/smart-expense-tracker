@@ -1,6 +1,7 @@
 import { MonthlySummary } from "../../types";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
-import { formatCurrency } from "../../utils/formatters";
+import { formatMoney } from "../../utils/formatters";
+import { useCurrency } from "../../hooks/useCurrentUser";
 
 interface SummaryCardsProps {
   summary: MonthlySummary | null;
@@ -23,6 +24,8 @@ interface CardConfig {
  * Requirements: 5.1, 5.3, 5.4, 5.5, 5.6, 5.7
  */
 export function SummaryCards({ summary, loading, error }: SummaryCardsProps) {
+  const currency = useCurrency();
+
   // --- Error state: single banner spanning all three cards (Req 5.6) ---
   if (error) {
     return (
@@ -84,7 +87,7 @@ export function SummaryCards({ summary, loading, error }: SummaryCardsProps) {
           ) : (
             // Amount formatted with exactly two decimal places (Req 5.7)
             <p className={`mt-2 text-2xl font-bold ${card.amountClass}`}>
-              {formatCurrency(card.amount)}
+              {formatMoney(card.amount, currency)}
             </p>
           )}
         </div>
