@@ -24,6 +24,9 @@ dependencies = [
 
     # IANA time zone database for zoneinfo (Windows has no system copy)
     "tzdata==2025.2",
+
+    # Structured (JSON) logging
+    "structlog==26.1.0",
 ]
 
 [project.optional-dependencies]

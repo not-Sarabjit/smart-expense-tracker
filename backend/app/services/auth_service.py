@@ -5,8 +5,11 @@ from passlib.context import CryptContext
 
 from app.core.config import get_settings
 from app.core.exceptions import EmailAlreadyExistsException, InvalidCredentialsException
+from app.core.logging import get_logger
 from app.database.unit_of_work import UnitOfWork
 from app.repositories.user_repository import UserRepository
+
+logger = get_logger(__name__)
 
 # For password hashing and verifying. rehashes using other algos if provided if one is deprecated
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -27,12 +30,14 @@ class AuthService:
 
         hashed_password = pwd_context.hash(password)
         with self.uow:
-            return self.user_repository.create(
+            user = self.user_repository.create(
                 email=email,
                 hashed_password=hashed_password,
                 first_name=first_name,
                 last_name=last_name,
             )
+        logger.info("auth.registered", new_user_id=user.id)
+        return user
 
     def login(self, email: str, password: str) -> str:
         """
@@ -42,7 +47,11 @@ class AuthService:
         user = self.user_repository.get_by_email(email)
 
         if not user or not pwd_context.verify(password, user.hashed_password):
+            # Never log the email or password; the request_id is enough to correlate
+            logger.warning("auth.login_failed", known_user=user is not None)
             raise InvalidCredentialsException()
+
+        logger.info("auth.logged_in", login_user_id=user.id)
 
         access_token = self._create_access_token(user.id)
         return access_token

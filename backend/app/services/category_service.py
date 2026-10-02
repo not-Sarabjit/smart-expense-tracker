@@ -4,9 +4,12 @@ from app.core.exceptions import (
     CategoryInUseException,
     CategoryNotFoundException,
 )
+from app.core.logging import get_logger
 from app.database.unit_of_work import UnitOfWork
 from app.models.category import Category
 from app.repositories.category_repository import CategoryRepository
+
+logger = get_logger(__name__)
 
 
 class CategoryService:
@@ -43,9 +46,11 @@ class CategoryService:
                 raise CategoryAlreadyExistsException()
 
         with self.uow:
-            return self.category_repository.create(
+            category = self.category_repository.create(
                 name=name, category_type=category_type, user_id=user_id
             )
+        logger.info("category.created", category_id=category.id)
+        return category
 
     def update_category(
         self,
@@ -107,9 +112,11 @@ class CategoryService:
 
         in_use = self.category_repository.count_transactions(category_id)
         if in_use:
+            logger.info("category.delete_blocked", category_id=category_id, transactions=in_use)
             raise CategoryInUseException(
                 f"Category is used by {in_use} transaction(s). Move or delete them first."
             )
 
         with self.uow:
             self.category_repository.delete(category=category)
+        logger.info("category.deleted", category_id=category_id)

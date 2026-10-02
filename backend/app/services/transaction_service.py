@@ -8,12 +8,15 @@ from app.core.exceptions import (
     CategoryTypeMismatchException,
     TransactionNotFoundException,
 )
+from app.core.logging import get_logger
 from app.database.unit_of_work import UnitOfWork
 from app.models.category import Category
 from app.models.transaction import Transaction, TransactionSource
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.transaction_repository import TransactionRepository
 from app.utils.date_utils import last_day_of_month
+
+logger = get_logger(__name__)
 
 # API field name -> Transaction model attribute, for fields whose names differ
 _UPDATE_FIELD_TO_ATTRIBUTE = {"transaction_type": "type"}
@@ -81,7 +84,7 @@ class TransactionService:
             if category_id is not None:
                 self._validate_category(user_id, category_id, transaction_type)
 
-            return self.transaction_repository.create(
+            transaction = self.transaction_repository.create(
                 user_id=user_id,
                 amount=amount,
                 transaction_type=transaction_type,
@@ -90,6 +93,12 @@ class TransactionService:
                 category_id=category_id,
                 source=source,
             )
+        logger.info(
+            "transaction.created",
+            transaction_id=transaction.id,
+            source=_type_value(source),
+        )
+        return transaction
 
     def create_transactions(
         self,
@@ -103,7 +112,7 @@ class TransactionService:
         arguments of create_transaction (amount, transaction_type, description, date, category_id).
         """
         with self.uow:
-            return [
+            created = [
                 self.create_transaction(
                     user_id=user_id,
                     amount=Decimal(str(item["amount"])),
@@ -115,6 +124,8 @@ class TransactionService:
                 )
                 for item in items
             ]
+        logger.info("transaction.batch_created", count=len(created), source=_type_value(source))
+        return created
 
     def list_transactions(
         self,
@@ -187,7 +198,9 @@ class TransactionService:
                         user_id, category_id, updates.get("type", transaction.type)
                     )
 
-            return self.transaction_repository.update(transaction=transaction, **updates)
+            transaction = self.transaction_repository.update(transaction=transaction, **updates)
+        logger.info("transaction.updated", transaction_id=transaction.id, fields=sorted(updates))
+        return transaction
 
     def delete_transaction(self, user_id: int, transaction_id: int) -> None:
 
@@ -199,6 +212,7 @@ class TransactionService:
 
         with self.uow:
             self.transaction_repository.delete(transaction=transaction)
+        logger.info("transaction.deleted", transaction_id=transaction_id)
 
     def get_monthly_summary(self, user_id: int, year: int, month: int) -> dict:
         """

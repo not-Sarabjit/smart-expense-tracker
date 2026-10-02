@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -8,12 +6,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api import auth, category, transaction, users
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppException
-from app.core.logging import setup_logging
+from app.core.logging import get_logger, setup_logging
+from app.core.request_context import REQUEST_ID_HEADER, get_request_id
 from app.middleware.logging_middleware import RequestLoggingMiddleware
 
-setup_logging()
+setup_logging(level=get_settings().app.log_level, json_logs=get_settings().app.log_json)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 app = FastAPI(
@@ -34,10 +33,11 @@ app.add_middleware(
     allow_credentials=True,  # allow cookies/Authorization headers
     allow_methods=["*"],  # GET, POST, PUT, DELETE, etc.
     allow_headers=["*"],  # Authorization, Content-Type, etc.
-    expose_headers=["X-Total-Count"],  # let the browser read the pagination total
+    # let the browser read the pagination total and the correlation id
+    expose_headers=["X-Total-Count", REQUEST_ID_HEADER],
 )
 
-# Logging Middleware
+# Request id + access log middleware (added last = outermost, so it wraps CORS too)
 app.add_middleware(RequestLoggingMiddleware)
 
 
@@ -61,11 +61,13 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     # Catch-all for anything unexpected: log the traceback server-side,
     # never send it (or the exception text) to the client
     logger.error(
-        "Unhandled exception on %s %s",
-        request.method,
-        request.url.path,
+        "request.unhandled_exception",
+        method=request.method,
+        path=request.url.path,
         exc_info=(type(exc), exc, exc.__traceback__),
     )
+    # This handler runs outside RequestLoggingMiddleware, so add the id header here
+    request_id = get_request_id()
     return JSONResponse(
         status_code=500,
         content={
@@ -73,6 +75,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
             "message": "Internal server error",
             "status_code": 500,
         },
+        headers={REQUEST_ID_HEADER: request_id} if request_id else None,
     )
 
 
@@ -83,9 +86,9 @@ async def database_exception_handler(
 ):
     # The exception text contains SQL and parameters — log it, don't return it
     logger.error(
-        "Database error on %s %s",
-        request.method,
-        request.url.path,
+        "request.database_error",
+        method=request.method,
+        path=request.url.path,
         exc_info=(type(exc), exc, exc.__traceback__),
     )
     return JSONResponse(

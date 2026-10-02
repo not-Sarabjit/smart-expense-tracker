@@ -47,6 +47,7 @@
 | Auth | JWT via **python-jose 3.5.0**, password hashing via **passlib 1.7.4 + bcrypt 4.0.1** | bcrypt is pinned to 4.0.1 because passlib breaks with newer bcrypt. |
 | Existing AI deps (unused) | groq 0.30.0, langchain-core 0.3.61, langchain-community 0.3.24, langchain-groq 0.3.2, langchain-qdrant 0.2.0, qdrant-client 1.14.2, sentence-transformers 4.1.0 | **No code imports these yet.** They're the pre-1.0 LangChain line; see §11. Now an optional `ai` dependency group (see below). |
 | Vector DB | **Qdrant** (docker-compose, ports 6333 REST / 6334 gRPC) | Config exists in `Settings`, no code uses it. |
+| Logging | **structlog 26.1.0** | JSON lines with `request_id` / `user_id` (Step 0.9), see §4.2 |
 | Tests | pytest 9.1.1, httpx 0.27.2 (TestClient), locust 2.46.4 (load test) | |
 | Dependency management | **uv** + `pyproject.toml` | `uv.lock` committed; deps split into core, `ai` (optional), `dev` (optional) |
 | Linter / formatter | **Ruff** ≥0.7.0 | Config in `pyproject.toml [tool.ruff]`; also sets `pythonpath=["backend"]` for pytest (see §9) |
@@ -89,7 +90,8 @@ smart-expense-tracker/
 │       ├── core/
 │       │   ├── config.py       # Settings (pydantic-settings) → `settings` singleton
 │       │   ├── exceptions.py   # AppException + domain exceptions
-│       │   └── logging.py      # setup_logging(): console + rotating file logs/app.log
+│       │   ├── logging.py      # setup_logging(), get_logger(), build_formatter() — structlog JSON
+│       │   └── request_context.py # RequestContext ContextVar (request_id, user_id) + structlog processor
 │       ├── database/
 │       │   ├── base.py         # Base = declarative_base()
 │       │   ├── session.py      # engine, SessionLocal, get_db()
@@ -98,7 +100,7 @@ smart-expense-tracker/
 │       │   ├── auth.py         # get_current_user (HTTPBearer + JWT decode)
 │       │   └── features.py     # require_ai_enabled (AI_ENABLED kill switch → 503)
 │       ├── middleware/
-│       │   └── logging_middleware.py  # RequestLoggingMiddleware
+│       │   └── logging_middleware.py  # RequestLoggingMiddleware (pure ASGI): X-Request-ID + access log
 │       ├── models/             # SQLAlchemy models; __init__.py imports Category, Transaction, User
 │       │   ├── user.py
 │       │   ├── category.py
@@ -121,6 +123,7 @@ smart-expense-tracker/
 │               ├── test_regressions.py   # one test (or more) per bug B1–B11
 │               ├── test_unit_of_work.py  # atomicity: failing 3rd insert rolls back the first two
 │               ├── test_users.py         # /users/me, preferences validation, source/updated_at
+│               ├── test_logging.py       # JSON logs filtered by request_id; X-Request-ID handling
 │               └── test_transaction.py
 └── frontend/                   # see §10
 ```
@@ -213,14 +216,30 @@ Domain exceptions (all subclass `AppException`): `EmailAlreadyExistsException` (
 Routers do **not** wrap service calls in try/except — services raise `AppException` subclasses and the global
 handler renders them.
 
-### 4.2 Logging (`app/core/logging.py`, `app/middleware/logging_middleware.py`)
+### 4.2 Logging (`app/core/logging.py`, `app/core/request_context.py`, `app/middleware/logging_middleware.py`)
 
-- `setup_logging()` is called at import of `main.py`. Root logger at INFO, plain-text format
-  `"%(asctime)s | %(levelname)s | %(name)s | %(message)s"`, to stdout **and** `logs/app.log`
-  (RotatingFileHandler, 5 MB × 5 backups).
-- `RequestLoggingMiddleware` (logger `app.request`) logs `METHOD path -> status (ms)` and sets the response header
-  `request-process-time`.
-- **Not present:** request IDs / correlation IDs, user ID in logs, JSON/structured logs, tracing, metrics.
+- **structlog, JSON lines.** `setup_logging(level, json_logs)` runs at import of `main.py` (from
+  `settings.app.log_level` / `settings.app.log_json`). structlog loggers **and** plain `logging.getLogger()` loggers
+  go through the same processor chain (`ProcessorFormatter`) to stdout and `logs/app.log` (rotating 5 MB × 5, always
+  JSON). `APP_LOG_JSON=false` switches the console to coloured key=value for local dev.
+- Each line: `event`, `level`, `logger`, `timestamp` (ISO, UTC, `Z`), any key/values passed, plus **`request_id`**
+  and **`user_id`** during a request, and `exception` (formatted traceback) when `exc_info` is given.
+- **New code:** `from app.core.logging import get_logger`; `logger = get_logger(__name__)`;
+  `logger.info("domain.event_name", some_id=..., count=...)`. Event names are dotted, past tense
+  (`transaction.created`, `category.delete_blocked`, `auth.login_failed`). Never log passwords, tokens or emails.
+- **Request ids:** `RequestLoggingMiddleware` (pure ASGI, outermost) reuses a well-formed incoming `X-Request-ID`
+  (`[A-Za-z0-9._:-]{1,128}`) or generates `uuid4().hex`, stores a mutable `RequestContext` in a ContextVar, echoes
+  `X-Request-ID` (exposed via CORS) and `request-process-time` on the response, and logs one `request.finished`
+  line (`method`, `path`, `status_code`, `duration_ms`). `get_current_user` calls `bind_user_id(user.id)` so every
+  later line carries `user_id` (works across thread-pool hops because the context object is shared, not re-bound).
+  `get_request_id()` returns the current id (e.g. to pass into traces/jobs later). The 500 handler adds
+  `X-Request-ID` itself (it runs outside the middleware). uvicorn's access log is silenced (WARNING) to avoid
+  duplicate, id-less lines.
+- Domain events logged today: `transaction.created/updated/deleted/batch_created`, `category.created/deleted/
+  delete_blocked`, `auth.registered/logged_in/login_failed`, `request.database_error`,
+  `request.unhandled_exception`.
+- Filter one request: `grep '"request_id": "<id>"' backend/logs/app.log` (or `jq 'select(.request_id=="<id>")'`).
+- **Not present yet:** tracing, metrics.
 
 ### 4.3 Config (`app/core/config.py`)
 
@@ -229,7 +248,7 @@ flat via `env_prefix`, Python access is grouped:
 
 | Group (`settings.<x>`) | Class | Env vars (defaults) |
 |---|---|---|
-| `app` | `AppSettings` | `APP_NAME`, `APP_ENVIRONMENT` (`dev`\|`test`\|`prod`, default `dev`), `APP_DEBUG`, `APP_API_PREFIX`; `.is_prod` |
+| `app` | `AppSettings` | `APP_NAME`, `APP_ENVIRONMENT` (`dev`\|`test`\|`prod`, default `dev`), `APP_DEBUG`, `APP_API_PREFIX`, `APP_LOG_LEVEL` (`INFO`), `APP_LOG_JSON` (`true`); `.is_prod` |
 | `database` | `DatabaseSettings` | `DATABASE_URL` (required), `DATABASE_POOL_SIZE` 20, `DATABASE_MAX_OVERFLOW` 50, `DATABASE_POOL_TIMEOUT` 30, `DATABASE_ECHO` |
 | `auth` | `AuthSettings` | `SECRET_KEY` (required), `TOKEN_ALGORITHM` HS256, `ACCESS_TOKEN_EXPIRE_MINUTES` 60 |
 | `llm` | `LLMSettings` | `LLM_PROVIDER` groq, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TEMPERATURE`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES` |
@@ -457,6 +476,9 @@ AI tools should call **services** (so business rules are reused), never reposito
   `AI_ENABLED=false` defaults, so the suite needs no `.env`.
 - `test_regressions.py` has one test (or more) per bug B1–B11, each verified to fail on the pre-fix code. For
   asserting 500 responses use `TestClient(app, raise_server_exceptions=False)` (the `raw_client` fixture there).
+- Logs: structlog passes stdlib an event **dict** as `record.msg` — in `caplog` assertions read
+  `record.msg["event"]` / `record.msg["exc_info"]`; or use the `json_logs` fixture in `test_logging.py` to assert on
+  the rendered JSON lines.
 - `test_unit_of_work.py` checks commits through a **separate** session (`TestingSessionLocal` from
   `app/tests/conftest.py`) so only committed data is visible — reuse that pattern for atomicity tests.
 - `pyproject.toml [tool.pytest.ini_options]` sets `pythonpath = ["backend"]` so bare `pytest` / `uv run pytest`
@@ -553,7 +575,7 @@ AI tools should call **services** (so business rules are reused), never reposito
 | ~~G3~~ | **Resolved in Step 0.7** — `ix_transactions_user_id_date`, `ix_transactions_user_id_category_id`. | |
 | ~~G4~~ | **Resolved in Step 0.7** — `users.currency` / `users.timezone`. | |
 | ~~G5~~ | **Resolved in Steps 0.7 (BE) + 0.8 (FE)** — `GET/PATCH /users/me`; FE reads the profile from it, settings page edits preferences. | |
-| G6 | No request IDs, structured logs, tracing, metrics, rate limiting, Redis, background jobs, object storage. | – |
+| G6 | ~~Request IDs, structured logs~~ (**resolved in Step 0.9**). Still missing: tracing, metrics, rate limiting, Redis client code, background jobs, object storage. | – |
 | G7 | ~~`test.db` committed~~ **Partially resolved in Step 0.1** — removed from git tracking, added to `.gitignore` (file still exists locally, generated by pytest). `Settings` still needs env vars even for tests. | tests |
 | G8 | Postgres not in docker-compose (unused `postgres_data` volume declared). | docker-compose |
 

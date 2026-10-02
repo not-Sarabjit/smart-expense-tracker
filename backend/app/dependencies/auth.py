@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.request_context import bind_user_id
 from app.database.session import get_db
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -37,4 +38,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
 
+    # Every later log line in this request carries user_id
+    bind_user_id(user.id)
     return user

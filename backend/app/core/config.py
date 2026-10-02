@@ -43,6 +43,10 @@ class AppSettings(_GroupSettings):
     environment: Literal["dev", "test", "prod"] = "dev"
     debug: bool = False
     api_prefix: str = "/api/v1"
+    log_level: str = "INFO"
+    # JSON log lines on the console; set APP_LOG_JSON=false for coloured dev output.
+    # (logs/app.log is always JSON.)
+    log_json: bool = True
 
     @property
     def is_prod(self) -> bool:

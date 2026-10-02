@@ -271,6 +271,14 @@ def test_b7_total_count_respects_filters(client, user_a_headers):
 # --------------------------------------------------------------------- B8
 
 
+def logged_error_type(record, event: str):
+    """Exception class logged with `event` (structlog hands stdlib the event dict as record.msg)."""
+    if not isinstance(record.msg, dict) or record.msg.get("event") != event:
+        return None
+    exc_info = record.msg.get("exc_info")
+    return exc_info[0] if isinstance(exc_info, tuple) else None
+
+
 @pytest.fixture
 def raw_client(client):
     """Same test DB as `client`, but returns 500s instead of re-raising server exceptions."""
@@ -289,7 +297,9 @@ def test_b8_database_errors_do_not_leak_sql(raw_client, user_a_headers, caplog):
     assert response.status_code == 503
     assert "SELECT" not in response.text
     assert response.json()["error"] is True
-    assert any("Database error" in r.getMessage() and r.exc_info for r in caplog.records)
+    assert any(
+        logged_error_type(r, "request.database_error") is OperationalError for r in caplog.records
+    )
 
 
 def test_b8_unhandled_errors_are_logged_but_not_leaked(raw_client, user_a_headers, caplog):
@@ -307,8 +317,7 @@ def test_b8_unhandled_errors_are_logged_but_not_leaked(raw_client, user_a_header
         "status_code": 500,
     }
     assert any(
-        "Unhandled exception" in r.getMessage() and r.exc_info and r.exc_info[0] is RuntimeError
-        for r in caplog.records
+        logged_error_type(r, "request.unhandled_exception") is RuntimeError for r in caplog.records
     )
 
 
