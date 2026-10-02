@@ -2,12 +2,14 @@ from app.core.exceptions import (
     EmailAlreadyExistsException,
     UserNotFoundException,
 )
+from app.database.unit_of_work import UnitOfWork
 from app.repositories.user_repository import UserRepository
 
 
 class UserService:
-    def __init__(self, user_repository: UserRepository):
+    def __init__(self, user_repository: UserRepository, uow: UnitOfWork):
         self.user_repository = user_repository
+        self.uow = uow
 
     def get_profile(self, user_id: int):
 
@@ -47,6 +49,7 @@ class UserService:
             updates["email"] = email
 
         if updates:
-            user = self.user_repository.update(user, **updates)
+            with self.uow:
+                user = self.user_repository.update(user, **updates)
 
         return user

@@ -4,13 +4,15 @@ from app.core.exceptions import (
     CategoryInUseException,
     CategoryNotFoundException,
 )
+from app.database.unit_of_work import UnitOfWork
 from app.models.category import Category
 from app.repositories.category_repository import CategoryRepository
 
 
 class CategoryService:
-    def __init__(self, category_repository: CategoryRepository):
+    def __init__(self, category_repository: CategoryRepository, uow: UnitOfWork):
         self.category_repository = category_repository
+        self.uow = uow
 
     def list_category(self, user_id: int) -> list[Category]:
         """
@@ -40,10 +42,10 @@ class CategoryService:
             if category.name.lower() == name.lower() and category.category_type == category_type:
                 raise CategoryAlreadyExistsException()
 
-        new_category = self.category_repository.create(
-            name=name, category_type=category_type, user_id=user_id
-        )
-        return new_category
+        with self.uow:
+            return self.category_repository.create(
+                name=name, category_type=category_type, user_id=user_id
+            )
 
     def update_category(
         self,
@@ -86,9 +88,8 @@ class CategoryService:
             if cat.name.lower() == name_check.lower() and cat.category_type == category_type_check:
                 raise CategoryAlreadyExistsException()
 
-        category = self.category_repository.update(category=category, **updates)
-
-        return category
+        with self.uow:
+            return self.category_repository.update(category=category, **updates)
 
     def delete_category(self, user_id: int, category_id: int):
         """
@@ -110,4 +111,5 @@ class CategoryService:
                 f"Category is used by {in_use} transaction(s). Move or delete them first."
             )
 
-        self.category_repository.delete(category=category)
+        with self.uow:
+            self.category_repository.delete(category=category)

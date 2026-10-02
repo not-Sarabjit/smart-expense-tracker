@@ -153,7 +153,7 @@ class TransactionRepository:
             category_id=category_id,
         )
         self.db.add(transaction)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(transaction)
         return transaction
 
@@ -161,11 +161,11 @@ class TransactionRepository:
 
         for key, value in kwargs.items():
             setattr(transaction, key, value)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(transaction)
         return transaction
 
     def delete(self, transaction: Transaction) -> None:
 
         self.db.delete(transaction)
-        self.db.commit()
+        self.db.flush()

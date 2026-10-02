@@ -90,7 +90,8 @@ smart-expense-tracker/
 │       │   └── logging.py      # setup_logging(): console + rotating file logs/app.log
 │       ├── database/
 │       │   ├── base.py         # Base = declarative_base()
-│       │   └── session.py      # engine, SessionLocal, get_db()
+│       │   ├── session.py      # engine, SessionLocal, get_db()
+│       │   └── unit_of_work.py # UnitOfWork(db): `with uow:` commits on success / rolls back on error
 │       ├── dependencies/
 │       │   ├── auth.py         # get_current_user (HTTPBearer + JWT decode)
 │       │   └── features.py     # require_ai_enabled (AI_ENABLED kill switch → 503)
@@ -116,6 +117,7 @@ smart-expense-tracker/
 │               ├── test_auth.py
 │               ├── test_config.py
 │               ├── test_regressions.py   # one test (or more) per bug B1–B11
+│               ├── test_unit_of_work.py  # atomicity: failing 3rd insert rolls back the first two
 │               └── test_transaction.py
 └── frontend/                   # see §10
 ```
@@ -168,14 +170,20 @@ and Docker (Docker Desktop).
   ```python
   def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService:
       return TransactionService(transaction_repository=TransactionRepository(db),
-                                category_repository=CategoryRepository(db))
+                                category_repository=CategoryRepository(db),
+                                uow=UnitOfWork(db))
   ```
+  Every service that writes takes a `uow: UnitOfWork` built on the **same** `Session` as its repositories.
 - **Services** hold business rules (ownership checks, duplicate checks) and raise domain exceptions from
   `app.core.exceptions`. They receive `user_id: int` explicitly on every call — ownership is enforced by passing
   `user_id` down, not by a global context.
-- **Repositories** wrap one `Session`, build queries with `select(...)`, and **call `self.db.commit()` inside every
-  write method** (`create`, `update`, `delete`). There is **no unit-of-work**: a service can't group several writes
-  into one DB transaction today. (Matters for bulk imports and agent actions — see §12.)
+- **Repositories** wrap one `Session`, build queries with `select(...)`, and **only `flush()`** in write methods
+  (`create`, `update`, `delete`) — they never commit.
+- **Transactions (unit of work, Step 0.6):** services own the boundary. Wrap every write path in
+  `with self.uow:` (`app.database.unit_of_work.UnitOfWork`): it commits when the block exits normally and rolls
+  back on any exception, so several writes are atomic. Blocks nest — only the outermost commits — so a batch method
+  can call single-item service methods (see `TransactionService.create_transactions`). A write made outside a
+  `with uow:` block is **not** committed (the session is rolled back when `get_db` closes it).
 - **Models** use legacy `Column(...)` style on `Base = declarative_base()`. New models should match this style unless
   a tracker step decides to modernise to `Mapped[...]`.
 - **Schemas** use Pydantic v2 but `class Config: from_attributes = True` (deprecated style; `TransactionBase` uses
@@ -379,10 +387,18 @@ class CategoryRepository:
 class UserRepository:
     def get_by_id(self, user_id) / get_by_email(self, email) / create(...) / update(self, user, **kwargs)
 
+# app/database/unit_of_work.py
+class UnitOfWork:
+    def __init__(self, db: Session)
+    __enter__/__exit__   # outermost exit: commit (rollback + re-raise if commit fails); any exception: rollback
+    def commit(self) / rollback(self)
+
 # app/services/transaction_service.py
-class TransactionService(transaction_repository, category_repository):
+class TransactionService(transaction_repository, category_repository, uow):
     get_transaction(transaction_id, user_id)
     create_transaction(user_id, amount, transaction_type, description, date, category_id)
+    create_transactions(user_id, items: Iterable[dict]) -> list[Transaction]   # atomic batch; item keys =
+                                                     # amount, transaction_type, description?, date, category_id?
     list_transactions(user_id, transaction_type=None, category_id=None, start_date=None, end_date=None,
                       sort_by='date', sort_order='desc', limit=50, offset=0)
     count_transactions(user_id, transaction_type=None, category_id=None, start_date=None, end_date=None)
@@ -392,13 +408,13 @@ class TransactionService(transaction_repository, category_repository):
     _validate_category(user_id, category_id, transaction_type)  # exists / owned-or-default / type matches
 
 # app/services/category_service.py
-class CategoryService(category_repository):
+class CategoryService(category_repository, uow):
     list_category(user_id) / get_category(user_id, category_id) / create_category(user_id, name, category_type)
     update_category(user_id, category_id, name=None, category_type=None) / delete_category(user_id, category_id)
 
-# app/services/auth_service.py  — AuthService(user_repository): register(...), login(email, password) -> token
+# app/services/auth_service.py  — AuthService(user_repository, uow): register(...), login(email, password) -> token
 #   JWT payload {"sub", "iat", "exp"}; iat/exp are UTC-aware; lifetime = settings.auth.access_token_expire_minutes
-# app/services/user_service.py  — UserService(user_repository): get_profile, update_profile  (no router uses it)
+# app/services/user_service.py  — UserService(user_repository, uow): get_profile, update_profile  (no router uses it)
 ```
 
 AI tools should call **services** (so business rules are reused), never repositories directly, and always pass
@@ -418,6 +434,8 @@ AI tools should call **services** (so business rules are reused), never reposito
   `AI_ENABLED=false` defaults, so the suite needs no `.env`.
 - `test_regressions.py` has one test (or more) per bug B1–B11, each verified to fail on the pre-fix code. For
   asserting 500 responses use `TestClient(app, raise_server_exceptions=False)` (the `raw_client` fixture there).
+- `test_unit_of_work.py` checks commits through a **separate** session (`TestingSessionLocal` from
+  `app/tests/conftest.py`) so only committed data is visible — reuse that pattern for atomicity tests.
 - `pyproject.toml [tool.pytest.ini_options]` sets `pythonpath = ["backend"]` so bare `pytest` / `uv run pytest`
   resolves `import app...`.
 - CI: GitHub Actions, Python 3.12, `uv sync --extra dev` (core + dev only — skips the `ai` extras, so no
@@ -497,7 +515,7 @@ AI tools should call **services** (so business rules are reused), never reposito
 | ~~B11~~ | **Resolved in Step 0.4** — try/except removed from `register` / `login`. | |
 | ~~B12~~ | **Resolved in Step 0.4** — `CategoryRepository.get_all_for_user` used `Category.user_id is None` (Python identity → always False), so **default categories were never listed** and the duplicate check ignored them. Now `.is_(None)`. | |
 | ~~G1~~ | ~~`requirements.txt` is UTF-16 LE/CRLF...~~ **Resolved in Step 0.1** — migrated to `pyproject.toml` (UTF-8) + `uv.lock`; deps split into core/`ai`/`dev` groups; Ruff added. | repo root |
-| G2 | No unit-of-work: repositories commit per write. Needed for atomic bulk import / multi-step agent actions. | repositories |
+| ~~G2~~ | **Resolved in Step 0.6** — repositories flush; `UnitOfWork` in services owns commit/rollback. | |
 | G3 | No indexes on `transactions(user_id, date)` / `(user_id, category_id)`. | model/migration |
 | G4 | No user preferences (currency, timezone) — the agent needs both to interpret "this month" and format money. | `users` |
 | G5 | No `/users/me`; FE relies on localStorage profile set at register. | auth |

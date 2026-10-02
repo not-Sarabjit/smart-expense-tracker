@@ -24,13 +24,13 @@ class UserRepository:
             hashed_password=hashed_password,
         )
         self.db.add(user)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(user)
         return user
 
     def update(self, user: User, **kwargs) -> User:
         for key, value in kwargs.items():
             setattr(user, key, value)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(user)
         return user

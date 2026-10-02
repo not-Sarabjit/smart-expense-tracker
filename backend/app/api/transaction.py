@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.database.unit_of_work import UnitOfWork
 from app.dependencies.auth import get_current_user
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.transaction_repository import TransactionRepository
@@ -23,7 +24,9 @@ TOTAL_COUNT_HEADER = "X-Total-Count"
 
 def get_transaction_service(db: Session = Depends(get_db)) -> TransactionService:
     return TransactionService(
-        transaction_repository=TransactionRepository(db), category_repository=CategoryRepository(db)
+        transaction_repository=TransactionRepository(db),
+        category_repository=CategoryRepository(db),
+        uow=UnitOfWork(db),
     )
 
 

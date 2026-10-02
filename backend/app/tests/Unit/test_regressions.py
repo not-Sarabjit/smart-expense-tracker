@@ -15,6 +15,7 @@ from sqlalchemy.exc import OperationalError
 from app.api.main import app
 from app.api.transaction import get_transaction_service
 from app.core.config import get_settings
+from app.database.unit_of_work import UnitOfWork
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.user import User
@@ -335,7 +336,9 @@ def test_b9_token_expiry_is_utc_based(client):
 def test_b9_expired_token_is_rejected(client, db):
     headers = register_and_login(client, "exp@example.com")
     user_id = current_user_id(db, "exp@example.com")
-    expired = AuthService(UserRepository(db))._create_access_token(user_id, expires_minutes=-1)
+    expired = AuthService(UserRepository(db), UnitOfWork(db))._create_access_token(
+        user_id, expires_minutes=-1
+    )
 
     assert client.get("/api/v1/transactions", headers=headers).status_code == 200
     response = client.get("/api/v1/transactions", headers={"Authorization": f"Bearer {expired}"})
@@ -351,7 +354,7 @@ def test_b10_update_profile_applies_changes(db):
     db.add(user)
     db.commit()
 
-    updated = UserService(UserRepository(db)).update_profile(
+    updated = UserService(UserRepository(db), UnitOfWork(db)).update_profile(
         user.id, first_name="New", email="new@example.com"
     )
 

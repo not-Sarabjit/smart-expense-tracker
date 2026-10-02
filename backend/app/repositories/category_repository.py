@@ -40,7 +40,7 @@ class CategoryRepository:
         """
         category = Category(name=name, category_type=category_type, user_id=user_id)
         self.db.add(category)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(category)
 
         return category
@@ -51,7 +51,7 @@ class CategoryRepository:
         """
         for key, val in kwargs.items():
             setattr(category, key, val)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(category)
         return category
 
@@ -61,4 +61,4 @@ class CategoryRepository:
         """
 
         self.db.delete(category)
-        self.db.commit()
+        self.db.flush()

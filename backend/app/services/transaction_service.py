@@ -1,4 +1,6 @@
+from collections.abc import Iterable
 from datetime import date
+from decimal import Decimal
 
 from app.core.exceptions import (
     CategoryAccessDeniedException,
@@ -6,6 +8,7 @@ from app.core.exceptions import (
     CategoryTypeMismatchException,
     TransactionNotFoundException,
 )
+from app.database.unit_of_work import UnitOfWork
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.repositories.category_repository import CategoryRepository
@@ -23,10 +26,14 @@ def _type_value(transaction_type) -> str:
 
 class TransactionService:
     def __init__(
-        self, transaction_repository: TransactionRepository, category_repository: CategoryRepository
+        self,
+        transaction_repository: TransactionRepository,
+        category_repository: CategoryRepository,
+        uow: UnitOfWork,
     ):
         self.transaction_repository = transaction_repository
         self.category_repository = category_repository
+        self.uow = uow
 
     def _validate_category(self, user_id: int, category_id: int, transaction_type) -> Category:
         """
@@ -69,17 +76,37 @@ class TransactionService:
         category_id: int,
     ) -> Transaction:
 
-        if category_id is not None:
-            self._validate_category(user_id, category_id, transaction_type)
+        with self.uow:
+            if category_id is not None:
+                self._validate_category(user_id, category_id, transaction_type)
 
-        return self.transaction_repository.create(
-            user_id=user_id,
-            amount=amount,
-            transaction_type=transaction_type,
-            description=description,
-            date=date,
-            category_id=category_id,
-        )
+            return self.transaction_repository.create(
+                user_id=user_id,
+                amount=amount,
+                transaction_type=transaction_type,
+                description=description,
+                date=date,
+                category_id=category_id,
+            )
+
+    def create_transactions(self, user_id: int, items: Iterable[dict]) -> list[Transaction]:
+        """
+        Creates several transactions atomically: every item is validated and inserted inside one
+        DB transaction, so if any item fails nothing is saved. Each item takes the keyword
+        arguments of create_transaction (amount, transaction_type, description, date, category_id).
+        """
+        with self.uow:
+            return [
+                self.create_transaction(
+                    user_id=user_id,
+                    amount=Decimal(str(item["amount"])),
+                    transaction_type=item["transaction_type"],
+                    description=item.get("description"),
+                    date=item["date"],
+                    category_id=item.get("category_id"),
+                )
+                for item in items
+            ]
 
     def list_transactions(
         self,
@@ -143,13 +170,16 @@ class TransactionService:
         if not updates:
             return transaction
 
-        # Re-validate the category whenever the category or the type changes
-        if "category_id" in updates or "type" in updates:
-            category_id = updates.get("category_id", transaction.category_id)
-            if category_id is not None:
-                self._validate_category(user_id, category_id, updates.get("type", transaction.type))
+        with self.uow:
+            # Re-validate the category whenever the category or the type changes
+            if "category_id" in updates or "type" in updates:
+                category_id = updates.get("category_id", transaction.category_id)
+                if category_id is not None:
+                    self._validate_category(
+                        user_id, category_id, updates.get("type", transaction.type)
+                    )
 
-        return self.transaction_repository.update(transaction=transaction, **updates)
+            return self.transaction_repository.update(transaction=transaction, **updates)
 
     def delete_transaction(self, user_id: int, transaction_id: int) -> None:
 
@@ -159,7 +189,8 @@ class TransactionService:
         if not transaction:
             raise TransactionNotFoundException()
 
-        self.transaction_repository.delete(transaction=transaction)
+        with self.uow:
+            self.transaction_repository.delete(transaction=transaction)
 
     def get_monthly_summary(self, user_id: int, year: int, month: int) -> dict:
         """

@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 
 from app.core.config import get_settings
 from app.core.exceptions import EmailAlreadyExistsException, InvalidCredentialsException
+from app.database.unit_of_work import UnitOfWork
 from app.repositories.user_repository import UserRepository
 
 # For password hashing and verifying. rehashes using other algos if provided if one is deprecated
@@ -12,8 +13,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class AuthService:
-    def __init__(self, user_repository: UserRepository):
+    def __init__(self, user_repository: UserRepository, uow: UnitOfWork):
         self.user_repository = user_repository
+        self.uow = uow
 
     def register(self, email: str, password: str, first_name: str, last_name: str):
         """
@@ -24,12 +26,13 @@ class AuthService:
             raise EmailAlreadyExistsException()
 
         hashed_password = pwd_context.hash(password)
-        return self.user_repository.create(
-            email=email,
-            hashed_password=hashed_password,
-            first_name=first_name,
-            last_name=last_name,
-        )
+        with self.uow:
+            return self.user_repository.create(
+                email=email,
+                hashed_password=hashed_password,
+                first_name=first_name,
+                last_name=last_name,
+            )
 
     def login(self, email: str, password: str) -> str:
         """
