@@ -46,13 +46,13 @@ export function SummaryCards({ summary, loading, error }: SummaryCardsProps) {
   const cards: CardConfig[] = [
     {
       title: "Total Income",
-      amount: summary?.total_income ?? 0,
+      amount: summary?.income ?? 0,
       amountClass: "text-green-600 dark:text-green-400",
       accentClass: "border-t-green-500",
     },
     {
       title: "Total Expenses",
-      amount: summary?.total_expense ?? 0,
+      amount: summary?.expense ?? 0,
       amountClass: "text-red-500 dark:text-red-400",
       accentClass: "border-t-red-500",
     },

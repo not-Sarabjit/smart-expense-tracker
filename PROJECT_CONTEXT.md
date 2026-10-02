@@ -436,14 +436,23 @@ AI tools should call **services** (so business rules are reused), never reposito
 - **API layer (`src/api/`):** `client.ts` = axios instance, `baseURL: "/api/v1"`, request interceptor adds the
   Bearer token from `localStorage["access_token"]`, response interceptor on 401 clears the token and does
   `window.location.href = "/login"`. Resource modules: `auth.ts`, `transactions.ts`, `categories.ts`.
+  `transactions.ts` normalises the API's string `amount` to a number (`normalizeTransaction`); `getTransactions(params)`
+  returns one page `{items, total}` (`limit`/`offset`, total from `X-Total-Count`); `getAllTransactions(params)` pages
+  through everything (200/request, cap 5000); `getSummary` returns `{income, expense, net}` as numbers.
+- **Errors:** `utils/errorHandling.ts` `extractErrorMessage(err, fallback)` understands the AppException body
+  (`message`), FastAPI `detail` (string or array) and network errors — use it for every API error shown in the UI.
 - **Hooks (`src/hooks/`):** `useAuth` (login/register/logout/isAuthenticated via localStorage; also stores
-  `localStorage["user_profile"]`), `useTransactions`, `useCategories`, `useDashboardSummary`.
+  `localStorage["user_profile"]`), `useTransactions` (all rows for the period via `getAllTransactions`; exposes
+  `transactions`, `total`), `useCategories`, `useDashboardSummary`.
 - **Components:** `layout/` (Navbar, ProtectedRoute), `dashboard/` (MonthPicker, TransactionList, BarChartWidget,
   DonutChartWidget, SummaryCards), `transactions/TransactionForm`, `ui/` (LoadingSpinner, ConfirmModal, EmptyState).
-- **Types:** `src/types/index.ts`.
-- **Known FE/BE mismatches:** `MonthlySummary` expects `total_income`/`total_expense` but the backend returns
-  `income`/`expense` → **summary cards always show 0**; `Transaction.amount` typed `number` but the API sends a
-  string; `Category.user_id` typed `number` but can be `null`.
+- **Types:** `src/types/index.ts` — `TransactionResponse` (wire shape, `amount: string`) vs `Transaction` (app shape,
+  `amount: number`); `category_id: number | null`; `Category.user_id: number | null` (null = default category,
+  shown with a "Default" badge and no edit/delete on CategoriesPage); `MonthlySummary {income, expense, net}`;
+  `TransactionPage {items, total}`.
+- `TransactionList` renders 50 rows at a time ("Show more") with a "Showing N of total" footer.
+- FE/BE contract mismatches from the snapshot (B4 etc.) were fixed in Step 0.5. Checks: from `frontend/`,
+  `npx tsc -b`, `npx eslint src`, `npx vitest run` (all clean).
 - **For the chat feature:** there's no chat UI, no SSE handling, no global state library (state is in hooks),
   no file upload component. A chat panel will need `fetch` + `ReadableStream` for SSE (so it can send the
   Authorization header).
@@ -473,7 +482,7 @@ AI tools should call **services** (so business rules are reused), never reposito
 | ~~B1~~ | **Resolved in Step 0.4** — `update_transaction` maps `transaction_type` → `type`; `TransactionUpdate` accepts `type` or `transaction_type`. | | |
 | ~~B2~~ | **Resolved in Step 0.4** — summary uses `TransactionRepository.get_totals_by_type` (`SUM … GROUP BY type`); `month` validated 1–12. | | |
 | ~~B3~~ | **Resolved in Step 0.4** — ORM cascade removed; deleting a category in use → 409 `CategoryInUseException`. | | |
-| B4 | Dashboard summary cards always 0 — FE expects `total_income`/`total_expense`. | `frontend/src/types/index.ts`, `SummaryCards.tsx`, `DashboardPage.tsx` | UI bug |
+| ~~B4~~ | **Resolved in Step 0.5** — FE uses `income`/`expense`/`net`. | | |
 
 **Found by reading the code:**
 

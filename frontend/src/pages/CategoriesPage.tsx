@@ -11,8 +11,8 @@ import Navbar from "../components/layout/Navbar";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CASCADE_WARNING =
-  "Deleting this category may affect existing transactions linked to it. Are you sure?";
+const DELETE_WARNING =
+  "Delete this category? A category that is still used by transactions can't be deleted — move or delete those transactions first.";
 
 const DUPLICATE_NAME_ERROR = "A category with this name already exists.";
 
@@ -389,7 +389,7 @@ export default function CategoriesPage() {
       {/* ── Delete confirm modal (Requirement 11.9) ──────────────────────────── */}
       <ConfirmModal
         open={!!deleteTarget}
-        message={CASCADE_WARNING}
+        message={DELETE_WARNING}
         loading={deleteLoading}
         error={deleteError}
         onConfirm={handleDeleteConfirm}
@@ -426,9 +426,17 @@ function CategoryRow({ category, onEdit, onDelete }: CategoryRowProps) {
         >
           {category.category_type === "income" ? "Income" : "Expense"}
         </span>
+
+        {/* Built-in categories (user_id === null) are shared and read-only */}
+        {category.user_id === null && (
+          <span className="shrink-0 inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+            Default
+          </span>
+        )}
       </div>
 
-      {/* Action buttons */}
+      {/* Action buttons (custom categories only) */}
+      {category.user_id !== null && (
       <div className="flex items-center gap-2 shrink-0">
         {/* Edit button */}
         <button
@@ -450,6 +458,7 @@ function CategoryRow({ category, onEdit, onDelete }: CategoryRowProps) {
           Delete
         </button>
       </div>
+      )}
     </li>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import axios from 'axios';
-import { extractErrorMessage } from './errorHandling';
+import { extractErrorMessage, NETWORK_ERROR_MESSAGE } from './errorHandling';
 
 function makeAxiosError(detail: unknown, status = 400) {
   const err = new axios.AxiosError('Request failed');
@@ -44,5 +44,22 @@ describe('extractErrorMessage', () => {
 
   it('returns fallback for null input', () => {
     expect(extractErrorMessage(null)).toBe('Something went wrong.');
+  });
+
+  it("returns the message from a domain (AppException) error body", () => {
+    const err = new axios.AxiosError("Request failed");
+    err.response = {
+      data: { error: true, message: "Category is used by 3 transaction(s).", status_code: 409 },
+      status: 409,
+      statusText: "Conflict",
+      headers: {},
+      config: {} as never,
+    };
+    expect(extractErrorMessage(err)).toBe("Category is used by 3 transaction(s).");
+  });
+
+  it("returns a network message when there is no response", () => {
+    const err = new axios.AxiosError("Network Error");
+    expect(extractErrorMessage(err)).toBe(NETWORK_ERROR_MESSAGE);
   });
 });

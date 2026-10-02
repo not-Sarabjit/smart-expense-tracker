@@ -68,8 +68,8 @@ export function DonutChartWidget({ transactions, categories }: DonutChartWidgetP
     categories.map((cat) => [cat.id, cat.name])
   );
 
-  // Group by category_id and sum amounts
-  const grouped = new Map<number, number>();
+  // Group by category_id (null = uncategorised) and sum amounts
+  const grouped = new Map<number | null, number>();
   for (const tx of expenseTransactions) {
     grouped.set(tx.category_id, (grouped.get(tx.category_id) ?? 0) + tx.amount);
   }
@@ -77,7 +77,10 @@ export function DonutChartWidget({ transactions, categories }: DonutChartWidgetP
   // Map to slice entries with resolved names and assigned colours
   const slices: SliceEntry[] = Array.from(grouped.entries()).map(
     ([categoryId, total], index) => ({
-      name: categoryMap.get(categoryId) ?? `Category ${categoryId}`,
+      name:
+        categoryId === null
+          ? "Uncategorised"
+          : categoryMap.get(categoryId) ?? `Category ${categoryId}`,
       value: total,
       fill: SLICE_COLOURS[index % SLICE_COLOURS.length],
     })

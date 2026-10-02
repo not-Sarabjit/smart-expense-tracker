@@ -4,6 +4,7 @@ import { Transaction, Category, TransactionType } from "@/types";
 import { createTransaction, updateTransaction, deleteTransaction } from "@/api/transactions";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { extractErrorMessage } from "@/utils/errorHandling";
 
 export interface TransactionFormProps {
   open: boolean;
@@ -89,7 +90,7 @@ export function TransactionForm({
       setAmount(String(transaction.amount));
       setDate(transaction.date);
       setType(transaction.type);
-      setCategoryId(String(transaction.category_id));
+      setCategoryId(transaction.category_id === null ? "" : String(transaction.category_id));
       setDescription(transaction.description ?? "");
     } else {
       // Create mode — reset to defaults
@@ -204,23 +205,14 @@ export function TransactionForm({
       if (fieldErrs && Object.keys(fieldErrs).length > 0) {
         setFieldErrors(fieldErrs);
       } else if (axios.isAxiosError(err) && err.response?.status === 422) {
-        setGlobalError("Validation failed. Please check your inputs.");
+        // Domain 422s (e.g. category/type mismatch) carry a `message`
+        setGlobalError(
+          extractErrorMessage(err, "Validation failed. Please check your inputs.")
+        );
       } else {
-        // Non-422 error
-        if (axios.isAxiosError(err)) {
-          const detail = err.response?.data?.detail;
-          if (typeof detail === "string") {
-            setGlobalError(detail);
-          } else if (Array.isArray(detail)) {
-            setGlobalError(detail.map((d) => d.msg).join(", "));
-          } else if (!err.response) {
-            setGlobalError("Unable to reach server. Please check your connection.");
-          } else {
-            setGlobalError("An unexpected error occurred. Please try again.");
-          }
-        } else {
-          setGlobalError("An unexpected error occurred. Please try again.");
-        }
+        setGlobalError(
+          extractErrorMessage(err, "An unexpected error occurred. Please try again.")
+        );
       }
     } finally {
       setSubmitting(false);
@@ -240,20 +232,9 @@ export function TransactionForm({
       onClose();
     } catch (err: unknown) {
       // Display inline error in ConfirmModal without closing it (Req 10.7)
-      if (axios.isAxiosError(err)) {
-        const detail = err.response?.data?.detail;
-        if (typeof detail === "string") {
-          setDeleteError(detail);
-        } else if (Array.isArray(detail)) {
-          setDeleteError(detail.map((d) => d.msg).join(", "));
-        } else if (!err.response) {
-          setDeleteError("Unable to reach server. Please check your connection.");
-        } else {
-          setDeleteError("Failed to delete transaction. Please try again.");
-        }
-      } else {
-        setDeleteError("An unexpected error occurred. Please try again.");
-      }
+      setDeleteError(
+        extractErrorMessage(err, "Failed to delete transaction. Please try again.")
+      );
     } finally {
       setDeleting(false);
     }

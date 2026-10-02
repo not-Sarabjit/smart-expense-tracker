@@ -43,6 +43,7 @@ export default function DashboardPage() {
 
   const {
     transactions,
+    total: txTotal,
     loading: txLoading,
     error: txError,
     refetch: transactionsRefetch,
@@ -112,13 +113,13 @@ export default function DashboardPage() {
   // ── onDelete callback from TransactionList ─────────────────────────────────
   // TransactionList manages its own ConfirmModal internally; it calls onDelete
   // with the deleted transaction after a successful delete so the parent can refetch.
-  const handleDeleteSuccess = useCallback((_tx: Transaction) => {
+  const handleDeleteSuccess = useCallback(() => {
     handleMutationSuccess();
   }, [handleMutationSuccess]);
 
   // ── Derived chart data ─────────────────────────────────────────────────────
-  const totalIncome = summary?.total_income ?? 0;
-  const totalExpense = summary?.total_expense ?? 0;
+  const totalIncome = summary?.income ?? 0;
+  const totalExpense = summary?.expense ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -211,6 +212,7 @@ export default function DashboardPage() {
           </h2>
           <TransactionList
             transactions={transactions}
+            total={txTotal}
             categories={categories}
             loading={txLoading}
             error={txError}

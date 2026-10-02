@@ -13,23 +13,37 @@ export interface Category {
   id: number;
   name: string;
   category_type: CategoryType;
-  user_id: number;
+  /** null = built-in default category (read-only); otherwise the owner's id */
+  user_id: number | null;
 }
 
-export interface Transaction {
+/** Transaction exactly as the API sends it — `amount` is a Decimal serialised as a string. */
+export interface TransactionResponse {
   id: number;
-  amount: number; // Decimal serialised as number by FastAPI
+  amount: string; // e.g. "42.50"
   date: string; // "YYYY-MM-DD"
-  type: TransactionType; // aliased from "transaction_type" by backend
-  category_id: number;
+  type: TransactionType;
+  category_id: number | null;
   description: string | null;
   created_at: string;
   updated_at: string | null;
 }
 
+/** Transaction as used inside the app — `amount` normalised to a number by the API layer. */
+export interface Transaction extends Omit<TransactionResponse, "amount"> {
+  amount: number;
+}
+
+/** One page of transactions; `total` comes from the X-Total-Count response header. */
+export interface TransactionPage {
+  items: Transaction[];
+  total: number;
+}
+
+/** GET /transactions/summary response */
 export interface MonthlySummary {
-  total_income: number;
-  total_expense: number;
+  income: number;
+  expense: number;
   net: number;
 }
 
@@ -43,15 +57,15 @@ export interface TransactionCreatePayload {
   amount: number;
   date: string; // "YYYY-MM-DD"
   type: TransactionType;
-  category_id: number;
+  category_id: number | null;
   description?: string | null;
 }
 
-export interface TransactionUpdatePayload extends Partial<TransactionCreatePayload> {}
+export type TransactionUpdatePayload = Partial<TransactionCreatePayload>;
 
 export interface CategoryCreatePayload {
   name: string;
   category_type: CategoryType;
 }
 
-export interface CategoryUpdatePayload extends Partial<CategoryCreatePayload> {}
+export type CategoryUpdatePayload = Partial<CategoryCreatePayload>;

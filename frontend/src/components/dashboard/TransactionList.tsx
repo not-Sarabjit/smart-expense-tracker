@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Transaction, Category } from "@/types";
 import { formatCurrency, formatDate } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { deleteTransaction } from "@/api/transactions";
-import axios from "axios";
+import { extractErrorMessage } from "@/utils/errorHandling";
 
 export interface TransactionListProps {
   transactions: Transaction[];
+  /** Total rows on the server for this period (defaults to transactions.length) */
+  total?: number;
   categories: Category[];
   loading: boolean;
   error: string | null;
@@ -19,6 +21,9 @@ export interface TransactionListProps {
 
 /** Number of skeleton rows to show while loading */
 const SKELETON_ROW_COUNT = 5;
+
+/** Rows rendered per "Show more" click */
+export const LIST_PAGE_SIZE = 50;
 
 /**
  * Displays a list of transactions with date, description, category, and
@@ -31,6 +36,7 @@ const SKELETON_ROW_COUNT = 5;
  */
 export function TransactionList({
   transactions,
+  total,
   categories,
   loading,
   error,
@@ -41,6 +47,14 @@ export function TransactionList({
   const categoryMap = new Map<number, string>(
     categories.map((c) => [c.id, c.name])
   );
+
+  // ── Client-side paging: render LIST_PAGE_SIZE rows at a time ───────────────
+  const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
+  useEffect(() => {
+    setVisibleCount(LIST_PAGE_SIZE);
+  }, [transactions]);
+  const visibleTransactions = transactions.slice(0, visibleCount);
+  const serverTotal = total ?? transactions.length;
 
   // ── Delete confirmation state ──────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
@@ -58,20 +72,9 @@ export function TransactionList({
       onDelete(deleteTarget);
     } catch (err: unknown) {
       // Display inline error in ConfirmModal without closing it (Req 10.7)
-      if (axios.isAxiosError(err)) {
-        const detail = err.response?.data?.detail;
-        if (typeof detail === "string") {
-          setDeleteError(detail);
-        } else if (Array.isArray(detail)) {
-          setDeleteError(detail.map((d) => d.msg).join(", "));
-        } else if (!err.response) {
-          setDeleteError("Unable to reach server. Please check your connection.");
-        } else {
-          setDeleteError("Failed to delete transaction. Please try again.");
-        }
-      } else {
-        setDeleteError("An unexpected error occurred. Please try again.");
-      }
+      setDeleteError(
+        extractErrorMessage(err, "Failed to delete transaction. Please try again.")
+      );
     } finally {
       setDeleting(false);
     }
@@ -152,13 +155,14 @@ export function TransactionList({
         </div>
 
         {/* Transaction rows */}
-        {transactions.map((tx) => {
+        {visibleTransactions.map((tx) => {
           const amountClass =
             tx.type === "income"
               ? "text-green-600 dark:text-green-400"
               : "text-red-500 dark:text-red-400";
 
-          const categoryName = categoryMap.get(tx.category_id) ?? "—";
+          const categoryName =
+            tx.category_id === null ? "—" : categoryMap.get(tx.category_id) ?? "—";
 
           return (
             <div
@@ -278,6 +282,22 @@ export function TransactionList({
             </div>
           );
         })}
+      </div>
+
+      {/* Paging footer */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <span>
+          Showing {visibleTransactions.length} of {serverTotal} transactions
+        </span>
+        {visibleCount < transactions.length && (
+          <button
+            type="button"
+            onClick={() => setVisibleCount((n) => n + LIST_PAGE_SIZE)}
+            className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          >
+            Show more
+          </button>
+        )}
       </div>
 
       {/* Delete confirmation modal (Req 10.2–10.7) */}
