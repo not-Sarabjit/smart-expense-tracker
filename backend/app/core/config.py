@@ -84,7 +84,13 @@ class LLMSettings(_GroupSettings):
     temperature: float = 0.0
     timeout_seconds: int = 30
     max_retries: int = 2
+    fallback_models: str = "llama-3.1-8b-instant"
 
+    @property
+    def fallback_model_list(self) -> list[str]:
+        """Parsed LLM_FALLBACK_MODELS, empty names dropped, primary never duplicated."""
+        names = [name.strip() for name in self.fallback_models.split(",")]
+        return [name for name in names if name and name != self.model]
 
 class EmbeddingSettings(_GroupSettings):
     """Embedding model. Env prefix: EMBEDDING_  (wired up in Step 8.6)"""

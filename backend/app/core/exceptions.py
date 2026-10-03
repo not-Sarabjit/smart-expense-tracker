@@ -117,3 +117,15 @@ class FeatureDisabledException(AppException):
         status_code: int = 503,
     ):
         super().__init__(message, status_code)
+
+# -------------------------   AI Exceptions ----------------------
+
+class LLMNotConfiguredException(AppException):
+    """Raised when the configured LLM provider/model cannot be built (missing key, unknown provider)."""
+
+    def __init__(
+            self,
+            message: str = "The AI assistant is not configured.",
+            status_code: int = 503
+    ):
+        super().__init__(message, status_code)
