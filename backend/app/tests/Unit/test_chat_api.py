@@ -89,9 +89,7 @@ def test_list_conversations_empty(client, user_a_headers):
     assert response.headers["X-Total-Count"] == "0"
 
 
-def test_list_conversations_is_user_scoped_and_newest_first(
-    client, user_a_headers, user_b_headers
-):
+def test_list_conversations_is_user_scoped_and_newest_first(client, user_a_headers, user_b_headers):
     first = _create(client, user_a_headers, title="first")
     second = _create(client, user_a_headers, title="second")
     _create(client, user_b_headers, title="other user")
@@ -223,9 +221,7 @@ def test_list_messages_is_chronological_and_paginated(client, db, user_a_headers
     assert [row["content"] for row in response.json()] == ["m0", "m1", "m2"]
     assert response.headers["X-Total-Count"] == "3"
 
-    page = client.get(
-        f"{BASE}/{created['id']}/messages?limit=1&offset=2", headers=user_a_headers
-    )
+    page = client.get(f"{BASE}/{created['id']}/messages?limit=1&offset=2", headers=user_a_headers)
     assert [row["content"] for row in page.json()] == ["m2"]
     assert page.headers["X-Total-Count"] == "3"
 
@@ -250,9 +246,7 @@ def test_message_payload_round_trips_tool_calls_and_meta(client, db, user_a_head
     assert body[0]["meta"]["prompt_tokens"] == 12
 
 
-def test_list_messages_of_other_users_conversation_is_404(
-    client, user_a_headers, user_b_headers
-):
+def test_list_messages_of_other_users_conversation_is_404(client, user_a_headers, user_b_headers):
     created = _create(client, user_a_headers)
     response = client.get(f"{BASE}/{created['id']}/messages", headers=user_b_headers)
     assert response.status_code == 404

@@ -24,6 +24,7 @@ def make_user(timezone="Asia/Kolkata", currency="INR", first_name="Sarabjit"):
 
 # --- loading ---------------------------------------------------------------
 
+
 def test_shipped_version_exists():
     assert SYSTEM_PROMPT_VERSION in list_prompt_versions()
     assert load_prompt(SYSTEM_PROMPT_VERSION).strip()
@@ -43,6 +44,7 @@ def test_version_names_are_validated(version):
 
 # --- rendering -------------------------------------------------------------
 
+
 def test_missing_variable_is_an_error_not_silent():
     with pytest.raises(PromptRenderError) as exc:
         render_text("Hello ${who}, today is ${today}", {"today": "2026-10-05"})
@@ -61,22 +63,23 @@ def test_extra_variables_are_ignored():
 
 # --- context ---------------------------------------------------------------
 
+
 def test_today_is_resolved_in_the_users_timezone():
     """20:00 UTC is already the next day in Kolkata (UTC+05:30)."""
-    now = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.timezone.utc)
+    now = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.UTC)
     context = PromptContext.from_user(make_user(), now=now)
     assert context.today == dt.date(2026, 10, 6)
 
 
 def test_other_timezones_give_a_different_today():
-    now = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.timezone.utc)
+    now = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.UTC)
     context = PromptContext.from_user(make_user(timezone="America/New_York"), now=now)
     assert context.today == dt.date(2026, 10, 5)
 
 
 def test_naive_now_is_treated_as_utc():
     naive = dt.datetime(2026, 10, 5, 20, 0)
-    aware = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.timezone.utc)
+    aware = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.UTC)
     assert (
         PromptContext.from_user(make_user(), now=naive).today
         == PromptContext.from_user(make_user(), now=aware).today
@@ -84,7 +87,7 @@ def test_naive_now_is_treated_as_utc():
 
 
 def test_bad_timezone_falls_back_to_utc():
-    now = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.timezone.utc)
+    now = dt.datetime(2026, 10, 5, 20, 0, tzinfo=dt.UTC)
     context = PromptContext.from_user(make_user(timezone="Mars/Olympus"), now=now)
     assert context.timezone == "UTC"
     assert context.today == dt.date(2026, 10, 5)
@@ -105,16 +108,15 @@ def test_currency_is_upper_cased():
 
 # --- the shipped prompt ----------------------------------------------------
 
+
 def test_shipped_prompt_needs_only_what_the_context_supplies():
     """Guards against adding a ${placeholder} with nothing to fill it."""
     context = PromptContext.from_user(make_user())
-    assert required_variables(load_prompt(SYSTEM_PROMPT_VERSION)) <= set(
-        context.as_variables()
-    )
+    assert required_variables(load_prompt(SYSTEM_PROMPT_VERSION)) <= set(context.as_variables())
 
 
 def test_render_system_prompt_substitutes_everything():
-    now = dt.datetime(2026, 10, 5, 6, 0, tzinfo=dt.timezone.utc)
+    now = dt.datetime(2026, 10, 5, 6, 0, tzinfo=dt.UTC)
     context = PromptContext.from_user(make_user(), now=now)
     rendered = render_system_prompt(context)
 

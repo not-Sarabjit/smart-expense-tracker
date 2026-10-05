@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from string import Template
-from typing import Any, Mapping
+from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.logging import get_logger
@@ -75,7 +76,7 @@ class PromptContext:
     currency: str
 
     @classmethod
-    def from_user(cls, user: Any, *, now: dt.datetime | None = None) -> "PromptContext":
+    def from_user(cls, user: Any, *, now: dt.datetime | None = None) -> PromptContext:
         """Adapt a ``User`` row into a prompt context.
 
         ``now`` is for tests; it defaults to the current UTC instant. "Today" is
@@ -83,7 +84,7 @@ class PromptContext:
         """
         moment = now if now is not None else utcnow()
         if moment.tzinfo is None:
-            moment = moment.replace(tzinfo=dt.timezone.utc)
+            moment = moment.replace(tzinfo=dt.UTC)
 
         tz_name = (getattr(user, "timezone", None) or _FALLBACK_TIMEZONE).strip()
         try:
@@ -95,7 +96,7 @@ class PromptContext:
                 fallback=_FALLBACK_TIMEZONE,
             )
             tz_name = _FALLBACK_TIMEZONE
-            tzinfo = dt.timezone.utc
+            tzinfo = dt.UTC
 
         first_name = (getattr(user, "first_name", None) or "").strip()
         currency = (getattr(user, "currency", None) or _FALLBACK_CURRENCY).strip().upper()
@@ -156,15 +157,12 @@ def render_text(text: str, variables: Mapping[str, Any]) -> str:
     template = Template(text)
     missing = sorted(_identifiers(template) - set(variables))
     if missing:
-        raise PromptRenderError(
-            f"Missing prompt variable(s): {', '.join(missing)}"
-        )
+        raise PromptRenderError(f"Missing prompt variable(s): {', '.join(missing)}")
     try:
         return template.substitute(variables)
     except ValueError as exc:  # a bare or malformed "$" in the file
         raise PromptRenderError(
-            f"Invalid placeholder in prompt template: {exc}. "
-            "Write a literal dollar sign as '$$'."
+            f"Invalid placeholder in prompt template: {exc}. Write a literal dollar sign as '$$'."
         ) from exc
 
 

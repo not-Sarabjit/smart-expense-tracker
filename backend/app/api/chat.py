@@ -68,9 +68,7 @@ def list_conversations(
         limit=limit,
         offset=offset,
     )
-    total = service.count_conversations(
-        user_id=current_user.id, include_archived=include_archived
-    )
+    total = service.count_conversations(user_id=current_user.id, include_archived=include_archived)
     response.headers["X-Total-Count"] = str(total)
     return conversations
 
@@ -82,9 +80,7 @@ def get_conversation(
     service: ConversationService = Depends(get_conversation_service),
 ):
     """Fetch one conversation. Another user's id returns 404, never 403."""
-    return service.get_conversation(
-        user_id=current_user.id, conversation_id=conversation_id
-    )
+    return service.get_conversation(user_id=current_user.id, conversation_id=conversation_id)
 
 
 @router.patch("/conversations/{conversation_id}", response_model=ConversationOut)
@@ -108,9 +104,7 @@ def delete_conversation(
     service: ConversationService = Depends(get_conversation_service),
 ) -> None:
     """Delete a conversation and, by ORM cascade, all of its messages."""
-    service.delete_conversation(
-        user_id=current_user.id, conversation_id=conversation_id
-    )
+    service.delete_conversation(user_id=current_user.id, conversation_id=conversation_id)
 
 
 @router.get(
@@ -135,8 +129,6 @@ def list_messages(
         limit=limit,
         offset=offset,
     )
-    total = service.count_messages(
-        user_id=current_user.id, conversation_id=conversation_id
-    )
+    total = service.count_messages(user_id=current_user.id, conversation_id=conversation_id)
     response.headers["X-Total-Count"] = str(total)
     return messages
