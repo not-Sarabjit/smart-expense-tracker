@@ -129,3 +129,21 @@ class LLMNotConfiguredException(AppException):
             status_code: int = 503
     ):
         super().__init__(message, status_code)
+
+
+
+
+
+class ConversationNotFoundException(AppException):
+    """Raised when a conversation does not exist or belongs to another user.
+
+    Deliberately 404, never 403: telling a user "this exists but isn't yours"
+    confirms the id is real. Same reasoning as TransactionNotFoundException.
+    """
+
+    def __init__(
+            self,
+            message: str = "Conversation not found",
+            status_code: int = 404
+    ):
+        super().__init__(message, status_code)

@@ -1,3 +1,4 @@
+# backend/app/models/user.py
 from sqlalchemy import Column, DateTime, Integer, String, func
 from sqlalchemy.orm import relationship
 
@@ -31,4 +32,9 @@ class User(Base):
     # With user created custom categories
     custom_categories = relationship(
         "Category", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    # With conversations
+    conversations = relationship(
+        "Conversation", back_populates="user", cascade="all, delete-orphan"
     )

@@ -166,3 +166,4 @@ def describe_llm(settings: Settings | None = None) -> dict[str, object]:
 def reset_chat_model_cache() -> None:
     """Clear the memoised models. Used by tests that override settings."""
     _build_cached.cache_clear()
+    

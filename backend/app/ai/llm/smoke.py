@@ -1,8 +1,3 @@
-"""Manual smoke test for the LLM gateway — the only thing here that hits the network.
-
-Run from backend/:   python -m app.ai.llm.smoke
-Needs LLM_API_KEY in backend/.env. Never imported by the app or the test suite.
-"""
 
 from __future__ import annotations
 
@@ -77,3 +72,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+    
