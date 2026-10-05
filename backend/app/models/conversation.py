@@ -28,17 +28,13 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(Uuid(), primary_key=True, default=uuid.uuid4)
-    user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     # NULL until the first turn is auto-titled (Step 1.6).
     title = Column(String(200), nullable=True)
     archived = Column(Boolean, nullable=False, default=False, server_default=false())
     # Python-side default gives microsecond precision on both SQLite and
     # Postgres; server_default remains as the safety net for non-ORM writes.
-    created_at = Column(
-        DateTime, nullable=False, default=utcnow, server_default=func.now()
-    )
+    created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
     updated_at = Column(
         DateTime,
         nullable=False,

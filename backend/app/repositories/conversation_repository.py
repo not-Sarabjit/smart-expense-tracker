@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.conversation import Conversation
 from app.utils.date_utils import utcnow
 
+
 class ConversationRepository:
     """Queries are user-scoped by construction: every read takes user_id."""
 
@@ -20,9 +21,7 @@ class ConversationRepository:
         self.db.refresh(conversation)
         return conversation
 
-    def get_by_id(
-        self, conversation_id: uuid.UUID, user_id: int
-    ) -> Conversation | None:
+    def get_by_id(self, conversation_id: uuid.UUID, user_id: int) -> Conversation | None:
         """Fetch one conversation owned by this user, else None."""
         stmt = select(Conversation).where(
             Conversation.id == conversation_id,
@@ -50,11 +49,7 @@ class ConversationRepository:
 
     def count_for_user(self, user_id: int, include_archived: bool = False) -> int:
         """Total matching rows, for the X-Total-Count header in Step 1.3."""
-        stmt = (
-            select(func.count())
-            .select_from(Conversation)
-            .where(Conversation.user_id == user_id)
-        )
+        stmt = select(func.count()).select_from(Conversation).where(Conversation.user_id == user_id)
         if not include_archived:
             stmt = stmt.where(Conversation.archived.is_(False))
         return self.db.execute(stmt).scalar_one()

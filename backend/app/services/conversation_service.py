@@ -32,9 +32,7 @@ class ConversationService:
 
     # ------------------------------------------------------------------ reads
 
-    def get_conversation(
-        self, user_id: int, conversation_id: uuid.UUID
-    ) -> Conversation:
+    def get_conversation(self, user_id: int, conversation_id: uuid.UUID) -> Conversation:
         """Return the user's conversation or raise 404 (also for other users')."""
         conversation = self.conversation_repository.get_by_id(conversation_id, user_id)
         if conversation is None:
@@ -89,9 +87,7 @@ class ConversationService:
 
     # ----------------------------------------------------------------- writes
 
-    def create_conversation(
-        self, user_id: int, title: str | None = None
-    ) -> Conversation:
+    def create_conversation(self, user_id: int, title: str | None = None) -> Conversation:
         """Create an (optionally titled) conversation. Title is auto-set in Step 1.6."""
         title = self._clean_title(title)
         with self.uow:

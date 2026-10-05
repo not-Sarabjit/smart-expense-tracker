@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 
 def last_day_of_month(year: int, month: int) -> date:
@@ -7,7 +7,6 @@ def last_day_of_month(year: int, month: int) -> date:
     from datetime import timedelta
 
     return date(year, month + 1, 1) - timedelta(days=1)
-
 
 
 def utcnow() -> datetime:
@@ -23,4 +22,4 @@ def utcnow() -> datetime:
     Naive (tzinfo stripped) because the DateTime columns in this schema are
     `TIMESTAMP WITHOUT TIME ZONE`. Everything stored is UTC by convention.
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)

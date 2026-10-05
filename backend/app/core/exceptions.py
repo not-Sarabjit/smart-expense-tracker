@@ -118,20 +118,17 @@ class FeatureDisabledException(AppException):
     ):
         super().__init__(message, status_code)
 
+
 # -------------------------   AI Exceptions ----------------------
+
 
 class LLMNotConfiguredException(AppException):
     """Raised when the configured LLM provider/model cannot be built (missing key, unknown provider)."""
 
     def __init__(
-            self,
-            message: str = "The AI assistant is not configured.",
-            status_code: int = 503
+        self, message: str = "The AI assistant is not configured.", status_code: int = 503
     ):
         super().__init__(message, status_code)
-
-
-
 
 
 class ConversationNotFoundException(AppException):
@@ -141,9 +138,5 @@ class ConversationNotFoundException(AppException):
     confirms the id is real. Same reasoning as TransactionNotFoundException.
     """
 
-    def __init__(
-            self,
-            message: str = "Conversation not found",
-            status_code: int = 404
-    ):
+    def __init__(self, message: str = "Conversation not found", status_code: int = 404):
         super().__init__(message, status_code)

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import sys
@@ -10,7 +9,6 @@ from langchain_core.tools import tool
 from app.ai.llm.factory import build_resilient, describe_llm, get_chat_model
 from app.core.config import get_settings
 from app.core.exceptions import LLMNotConfiguredException
-
 
 
 @tool
@@ -52,9 +50,7 @@ def main() -> int:
 
     print("\n[3/3] tool calling (required for Phase 3) ...")
     with_tools = chat_model.bind_tools([get_total_spent])
-    result = with_tools.invoke(
-        [HumanMessage(content="How much did I spend on Food in 2026-09?")]
-    )
+    result = with_tools.invoke([HumanMessage(content="How much did I spend on Food in 2026-09?")])
     if result.tool_calls:
         print(f"      -> model requested: {result.tool_calls}")
     else:
@@ -72,4 +68,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-    

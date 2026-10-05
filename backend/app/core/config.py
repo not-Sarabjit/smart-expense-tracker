@@ -92,6 +92,7 @@ class LLMSettings(_GroupSettings):
         names = [name.strip() for name in self.fallback_models.split(",")]
         return [name for name in names if name and name != self.model]
 
+
 class EmbeddingSettings(_GroupSettings):
     """Embedding model. Env prefix: EMBEDDING_  (wired up in Step 8.6)"""
 

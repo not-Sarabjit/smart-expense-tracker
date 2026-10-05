@@ -149,9 +149,7 @@ def test_add_message_persists_role_content_and_json_columns(service, user_a):
     )
 
     with TestingSessionLocal() as other:
-        stored = other.execute(
-            select(Message).where(Message.id == message.id)
-        ).scalar_one()
+        stored = other.execute(select(Message).where(Message.id == message.id)).scalar_one()
         assert stored.role == MessageRole.assistant  # str-enum compares to "assistant"
         assert stored.content is None
         assert stored.tool_calls[0]["name"] == "query_transactions"
@@ -165,9 +163,7 @@ def test_add_message_rejects_unknown_role(service, user_a):
         service.add_message(user_a.id, conversation.id, "robot", "hi")
 
 
-def test_add_message_to_another_users_conversation_is_rejected(
-    service, user_a, user_b
-):
+def test_add_message_to_another_users_conversation_is_rejected(service, user_a, user_b):
     conversation = service.create_conversation(user_a.id)
 
     with pytest.raises(ConversationNotFoundException):
@@ -222,9 +218,11 @@ def test_deleting_a_conversation_cascades_to_its_messages(service, user_a):
             ).scalar_one_or_none()
             is None
         )
-        orphans = other.execute(
-            select(Message).where(Message.conversation_id == conversation_id)
-        ).scalars().all()
+        orphans = (
+            other.execute(select(Message).where(Message.conversation_id == conversation_id))
+            .scalars()
+            .all()
+        )
         assert orphans == []
 
 
@@ -233,9 +231,11 @@ def test_failed_message_insert_rolls_back_the_activity_bump(service, user_a, db)
     so we fail inside the same UnitOfWork block via a bad role."""
     conversation = service.create_conversation(user_a.id)
     with TestingSessionLocal() as other:
-        before = other.execute(
-            select(Conversation).where(Conversation.id == conversation.id)
-        ).scalar_one().updated_at
+        before = (
+            other.execute(select(Conversation).where(Conversation.id == conversation.id))
+            .scalar_one()
+            .updated_at
+        )
 
     with pytest.raises(ValueError):
         service.add_message(user_a.id, conversation.id, "not-a-role", "boom")
@@ -246,9 +246,9 @@ def test_failed_message_insert_rolls_back_the_activity_bump(service, user_a, db)
         ).scalar_one()
         assert after.updated_at == before
         assert (
-            other.execute(
-                select(Message).where(Message.conversation_id == conversation.id)
-            ).scalars().all()
+            other.execute(select(Message).where(Message.conversation_id == conversation.id))
+            .scalars()
+            .all()
             == []
         )
 
@@ -274,10 +274,7 @@ def test_deleting_a_user_cascades_to_conversations_and_messages(service, user_a,
     db.commit()
 
     with TestingSessionLocal() as other:
-        assert (
-            other.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
-            is None
-        )
+        assert other.execute(select(User).where(User.id == user_id)).scalar_one_or_none() is None
         assert (
             other.execute(
                 select(Conversation).where(Conversation.id == conversation_id)
@@ -285,9 +282,7 @@ def test_deleting_a_user_cascades_to_conversations_and_messages(service, user_a,
             is None
         )
         assert (
-            other.execute(
-                select(Message).where(Message.conversation_id == conversation_id)
-            )
+            other.execute(select(Message).where(Message.conversation_id == conversation_id))
             .scalars()
             .all()
             == []

@@ -15,14 +15,15 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import JSON
-from app.utils.date_utils import utcnow
+
 from app.database.base import Base
+from app.utils.date_utils import utcnow
 
 # JSONB on Postgres (binary, indexable); plain JSON on SQLite for the test suite.
 JSONVariant = JSON().with_variant(JSONB(), "postgresql")
 
 
-class MessageRole(str, enum.Enum):
+class MessageRole(enum.StrEnum):
     """Who produced the message. Stored as a plain string :
     the set of roles will grow, and VARCHAR grows without a migration.
 
@@ -58,9 +59,7 @@ class Message(Base):
     tool_calls = Column(JSONVariant, nullable=True)
 
     meta = Column(JSONVariant, nullable=True)
-    created_at = Column(
-        DateTime, nullable=False, default=utcnow, server_default=func.now()
-    )
+    created_at = Column(DateTime, nullable=False, default=utcnow, server_default=func.now())
 
     conversation = relationship("Conversation", back_populates="messages")
 

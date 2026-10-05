@@ -31,9 +31,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("title", sa.String(length=200), nullable=True),
-        sa.Column(
-            "archived", sa.Boolean(), nullable=False, server_default=sa.false()
-        ),
+        sa.Column("archived", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column(
             "created_at",
             sa.DateTime(),
@@ -74,22 +72,16 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.func.now(),
         ),
-        sa.ForeignKeyConstraint(
-            ["conversation_id"], ["conversations.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["conversation_id"], ["conversations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_messages_id"), "messages", ["id"])
-    op.create_index(
-        "ix_messages_conversation_id_id", "messages", ["conversation_id", "id"]
-    )
+    op.create_index("ix_messages_conversation_id_id", "messages", ["conversation_id", "id"])
 
 
 def downgrade() -> None:
     op.drop_index("ix_messages_conversation_id_id", table_name="messages")
     op.drop_index(op.f("ix_messages_id"), table_name="messages")
     op.drop_table("messages")
-    op.drop_index(
-        "ix_conversations_user_id_updated_at", table_name="conversations"
-    )
+    op.drop_index("ix_conversations_user_id_updated_at", table_name="conversations")
     op.drop_table("conversations")

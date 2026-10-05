@@ -43,9 +43,7 @@ def _build_groq(
         ) from exc
 
     if not api_key:
-        raise LLMNotConfiguredException(
-            "LLM_API_KEY is not set, so no chat model can be created."
-        )
+        raise LLMNotConfiguredException("LLM_API_KEY is not set, so no chat model can be created.")
 
     return ChatGroq(
         model=model,
@@ -123,10 +121,7 @@ def get_chat_model(settings: Settings | None = None) -> BaseChatModel:
 def get_fallback_models(settings: Settings | None = None) -> list[BaseChatModel]:
     """Models tried, in order, when the primary fails (LLM_FALLBACK_MODELS)."""
     settings = settings or get_settings()
-    return [
-        build_chat_model(name, settings=settings)
-        for name in settings.llm.fallback_model_list
-    ]
+    return [build_chat_model(name, settings=settings) for name in settings.llm.fallback_model_list]
 
 
 def build_resilient(
@@ -166,4 +161,3 @@ def describe_llm(settings: Settings | None = None) -> dict[str, object]:
 def reset_chat_model_cache() -> None:
     """Clear the memoised models. Used by tests that override settings."""
     _build_cached.cache_clear()
-    
