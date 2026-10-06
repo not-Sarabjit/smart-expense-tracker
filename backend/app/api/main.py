@@ -16,13 +16,9 @@ setup_logging(level=get_settings().app.log_level, json_logs=get_settings().app.l
 logger = get_logger(__name__)
 
 
-
-
 # inside the lifespan, before `yield`:
 if get_settings().ai.enabled:
     get_compiled_graph()
-
-
 
 
 app = FastAPI(
