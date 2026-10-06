@@ -46,3 +46,29 @@ export function formatMoney(amount: number, currency: string): string {
     return formatCurrency(amount, `${currency} `);
   }
 }
+
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 365 * 24 * 3600],
+  ["month", 30 * 24 * 3600],
+  ["week", 7 * 24 * 3600],
+  ["day", 24 * 3600],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+/**
+ * Formats an ISO timestamp relative to `now`, e.g. "5 minutes ago", "yesterday".
+ * Anything under a minute old is "just now"; an unparseable input is returned as-is.
+ * @param isoString - ISO 8601 timestamp
+ * @param now - Reference time in ms (defaults to Date.now(); injectable for tests)
+ */
+export function formatRelativeTime(isoString: string, now: number = Date.now()): string {
+  const time = Date.parse(isoString);
+  if (Number.isNaN(time)) return isoString;
+  const seconds = Math.round((time - now) / 1000);
+  const rtf = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
+  for (const [unit, size] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= size) return rtf.format(Math.trunc(seconds / size), unit);
+  }
+  return "just now";
+}

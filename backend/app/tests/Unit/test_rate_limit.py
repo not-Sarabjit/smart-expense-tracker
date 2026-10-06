@@ -219,7 +219,9 @@ def test_throttled_request_writes_no_message_row(
     assert listed.headers["X-Total-Count"] == "4"
 
 
-def test_unknown_conversation_still_404s_not_429(limited_client, user_a_headers):
+def test_unknown_conversation_still_404s_not_429(
+    limited_client, user_a_headers, fake_graph, fake_title_model
+):
     """The limit must not mask ownership errors on the first request."""
     response = limited_client.post(
         f"/api/v1/chat/conversations/{uuid.uuid4()}/messages",

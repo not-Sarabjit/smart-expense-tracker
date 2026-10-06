@@ -104,6 +104,12 @@ export default function Navbar() {
               Categories
             </Link>
             <Link
+              to="/chat"
+              className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm transition-colors"
+            >
+              Chat
+            </Link>
+            <Link
               to="/settings"
               className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm transition-colors"
             >
@@ -182,6 +188,13 @@ export default function Navbar() {
             onClick={() => setMenuOpen(false)}
           >
             Categories
+          </Link>
+          <Link
+            to="/chat"
+            className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm"
+            onClick={() => setMenuOpen(false)}
+          >
+            Chat
           </Link>
           <Link
             to="/settings"

@@ -79,3 +79,7 @@ export interface CategoryCreatePayload {
 }
 
 export type CategoryUpdatePayload = Partial<CategoryCreatePayload>;
+
+// --- Chat ---
+
+export * from "./chat";
