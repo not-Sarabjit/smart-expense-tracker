@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.ai.agent.graph import get_compiled_graph
 from app.api import auth, category, chat, transaction, users
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppException
@@ -13,6 +14,15 @@ from app.middleware.logging_middleware import RequestLoggingMiddleware
 setup_logging(level=get_settings().app.log_level, json_logs=get_settings().app.log_json)
 
 logger = get_logger(__name__)
+
+
+
+
+# inside the lifespan, before `yield`:
+if get_settings().ai.enabled:
+    get_compiled_graph()
+
+
 
 
 app = FastAPI(
