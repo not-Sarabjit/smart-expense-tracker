@@ -117,6 +117,7 @@ def get_chat_model(settings: Settings | None = None) -> BaseChatModel:
     settings = settings or get_settings()
     return build_chat_model(settings.llm.model, settings=settings)
 
+
 def get_title_model(settings: Settings | None = None) -> BaseChatModel:
     """The small, cheap model used for conversation titles and (later)
     classification. Separate from the agent model so the expensive one isn't

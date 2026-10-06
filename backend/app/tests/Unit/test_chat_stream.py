@@ -162,9 +162,7 @@ def test_conversation_is_auto_titled_only_once(
     assert conversation["title"] == "Groceries in September"
 
 
-def test_history_is_replayed_into_the_graph(
-    client, user_a_headers, fake_graph, fake_title_model
-):
+def test_history_is_replayed_into_the_graph(client, user_a_headers, fake_graph, fake_title_model):
     conversation_id = create_conversation(client, user_a_headers)
     url = f"/api/v1/chat/conversations/{conversation_id}/messages"
 

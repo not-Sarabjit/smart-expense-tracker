@@ -54,6 +54,7 @@ class MessageOut(BaseModel):
     meta: dict[str, Any] | None
     created_at: datetime
 
+
 class MessageCreate(BaseModel):
     """Body of POST /chat/conversations/{id}/messages."""
 

@@ -24,14 +24,14 @@ from typing import Any
 class SSEEvent(StrEnum):
     """Every event the chat stream may emit. Phase noted where not yet used."""
 
-    message_start = "message_start"          # always first
-    token = "token"                          # 0..n
-    tool_start = "tool_start"                # Phase 3 (3.8)
-    tool_end = "tool_end"                    # Phase 3 (3.8)
-    clarification = "clarification"          # Phase 3 (3.9)
-    confirm_required = "confirm_required"    # Phase 4 (4.4)
-    error = "error"                          # terminal
-    message_end = "message_end"              # terminal, success
+    message_start = "message_start"  # always first
+    token = "token"  # 0..n
+    tool_start = "tool_start"  # Phase 3 (3.8)
+    tool_end = "tool_end"  # Phase 3 (3.8)
+    clarification = "clarification"  # Phase 3 (3.9)
+    confirm_required = "confirm_required"  # Phase 4 (4.4)
+    error = "error"  # terminal
+    message_end = "message_end"  # terminal, success
 
 
 #: Headers that go with every SSE response.

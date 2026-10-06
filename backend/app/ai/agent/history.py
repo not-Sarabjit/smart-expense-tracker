@@ -70,6 +70,7 @@ def to_lc_messages(rows: Sequence[Message]) -> list[AnyMessage]:
 
     return messages
 
+
 def message_text(message: BaseMessage) -> str:
     """Flatten a message's content to plain text.
 

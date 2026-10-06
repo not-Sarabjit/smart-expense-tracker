@@ -155,6 +155,7 @@ def list_messages(
     response.headers["X-Total-Count"] = str(total)
     return messages
 
+
 @router.post(
     "/conversations/{conversation_id}/messages",
     status_code=status.HTTP_200_OK,
@@ -258,9 +259,7 @@ async def send_message(
                         "total_tokens": accumulated.usage_metadata.get("total_tokens"),
                     }
                 # The answer may have come from a fallback model, not the primary.
-                model_name = (
-                    accumulated.response_metadata.get("model_name") or model_name
-                )
+                model_name = accumulated.response_metadata.get("model_name") or model_name
 
             meta = {
                 "model": model_name,
@@ -313,14 +312,10 @@ async def send_message(
         except asyncio.CancelledError:
             # Client hung up mid-answer. The user's message is already saved;
             # the partial assistant reply is dropped. Step 11.4 does this properly.
-            logger.info(
-                "chat.turn_cancelled", conversation_id=str(conversation_id)
-            )
+            logger.info("chat.turn_cancelled", conversation_id=str(conversation_id))
             raise
         except Exception:
-            logger.exception(
-                "chat.turn_failed", conversation_id=str(conversation_id)
-            )
+            logger.exception("chat.turn_failed", conversation_id=str(conversation_id))
             yield format_sse(
                 SSEEvent.error,
                 {

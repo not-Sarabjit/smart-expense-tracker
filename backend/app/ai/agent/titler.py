@@ -46,9 +46,7 @@ async def generate_title(model: BaseChatModel, first_user_message: str) -> str |
 
     try:
         system = load_prompt(TITLE_PROMPT_VERSION)
-        reply = await model.ainvoke(
-            [SystemMessage(content=system), HumanMessage(content=text)]
-        )
+        reply = await model.ainvoke([SystemMessage(content=system), HumanMessage(content=text)])
     except Exception:
         logger.warning("chat.title_generation_failed", exc_info=True)
         return None

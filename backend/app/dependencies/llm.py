@@ -9,6 +9,7 @@ def get_llm(settings: Settings = Depends(get_settings)) -> BaseChatModel:
     """The configured primary chat model (cached across requests)."""
     return get_chat_model(settings=settings)
 
+
 def get_title_llm(settings: Settings = Depends(get_settings)) -> BaseChatModel:
     """Injectable small model for auto-titling. Overridden in tests."""
     return get_title_model(settings)
