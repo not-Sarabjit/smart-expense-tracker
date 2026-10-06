@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langchain_core.messages import AIMessage, AnyMessage, BaseMessage, HumanMessage
 
 from app.core.logging import get_logger
 from app.models.message import Message
@@ -69,3 +69,23 @@ def to_lc_messages(rows: Sequence[Message]) -> list[AnyMessage]:
         logger.debug("agent.history_rows_skipped", skipped=skipped, kept=len(messages))
 
     return messages
+
+def message_text(message: BaseMessage) -> str:
+    """Flatten a message's content to plain text.
+
+    `content` is usually a `str`, but langchain-core also allows a list of
+    content blocks (dicts like `{"type": "text", "text": "..."}`). Handling both
+    here means callers never have to care which provider they're on.
+    """
+    content = message.content
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type") == "text":
+                parts.append(block.get("text", ""))
+        return "".join(parts)
+    return ""

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MAX_TITLE_LENGTH = 200
 
@@ -53,3 +53,16 @@ class MessageOut(BaseModel):
     tool_calls: Any | None
     meta: dict[str, Any] | None
     created_at: datetime
+
+class MessageCreate(BaseModel):
+    """Body of POST /chat/conversations/{id}/messages."""
+
+    content: str = Field(..., min_length=1, max_length=4000)
+
+    @field_validator("content")
+    @classmethod
+    def _strip_content(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("content must not be blank")
+        return cleaned

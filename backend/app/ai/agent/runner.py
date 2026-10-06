@@ -13,15 +13,21 @@ Persistence is *not* done here - 1.6 owns writing the user and assistant rows.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    AnyMessage,
+    HumanMessage,
+    SystemMessage,
+)
 from langchain_core.runnables import Runnable
 
-from app.ai.agent.graph import get_compiled_graph
+from app.ai.agent.graph import AGENT_NODE, get_compiled_graph
 from app.ai.agent.history import to_lc_messages
 from app.ai.agent.state import AgentContext, AgentState
 from app.ai.prompts.loader import PromptContext, render_system_prompt
@@ -107,3 +113,42 @@ async def run_turn(inputs: TurnInputs, *, graph: Runnable | None = None) -> AIMe
         raise RuntimeError(f"agent graph ended on a {type(reply).__name__}, expected AIMessage")
 
     return reply
+
+async def stream_turn(
+    inputs: TurnInputs,
+    *,
+    graph: Runnable | None = None,
+) -> AsyncIterator[AIMessageChunk]:
+    """Run one turn and yield the assistant's message chunks as they arrive.
+
+    Uses LangGraph's `stream_mode="messages"`, which surfaces the LLM's own
+    token chunks from inside the node as `(chunk, metadata)` pairs. The caller
+    accumulates them (`acc = acc + chunk`) to get the final message — chunks add
+    together into a complete `AIMessageChunk`, usage metadata included.
+
+    Like `run_turn`, this persists nothing: the API layer owns the DB.
+    """
+    graph = graph or get_compiled_graph()
+
+    async for chunk, metadata in graph.astream(
+        inputs.state,
+        context=inputs.context,
+        stream_mode="messages",
+    ):
+        # Only the agent node's own output is the assistant's reply. In Phase 3
+        # other nodes will produce LLM calls we don't want echoed to the user.
+        node = (metadata or {}).get("langgraph_node")
+        if node is not None and node != AGENT_NODE:
+            continue
+
+        if isinstance(chunk, AIMessageChunk):
+            yield chunk
+        elif isinstance(chunk, AIMessage):
+            # A model that didn't stream hands back a whole AIMessage. Wrap it
+            # so the caller's accumulation logic stays uniform.
+            yield AIMessageChunk(
+                content=chunk.content,
+                id=chunk.id,
+                usage_metadata=chunk.usage_metadata,
+                response_metadata=chunk.response_metadata,
+            )

@@ -80,6 +80,7 @@ class LLMSettings(_GroupSettings):
 
     provider: str = "groq"
     model: str = "llama-3.3-70b-versatile"
+    title_model: str = "llama-3.1-8b-instant"
     api_key: str | None = None
     temperature: float = 0.0
     timeout_seconds: int = 30
