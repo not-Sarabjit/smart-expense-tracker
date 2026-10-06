@@ -93,6 +93,30 @@ class LLMSettings(_GroupSettings):
         names = [name.strip() for name in self.fallback_models.split(",")]
         return [name for name in names if name and name != self.model]
 
+class TracingSettings(BaseSettings):
+    """LLM tracing. Vendor-neutral names: switching backend must not rename env vars."""
+
+    model_config = SettingsConfigDict(
+        env_prefix="TRACING_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    enabled: bool = False
+    provider: str = "langfuse"
+    public_key: str | None = None
+    secret_key: str | None = None
+    host: str = "https://cloud.langfuse.com"
+    environment: str | None = None          # None -> falls back to APP_ENVIRONMENT
+    sample_rate: float = Field(default=1.0, ge=0.0, le=1.0)
+    debug: bool = False
+    flush_timeout_seconds: float = Field(default=5.0, gt=0.0)
+
+    @property
+    def is_configured(self) -> bool:
+        """Enabled AND has both keys. Enabled without keys is a misconfiguration, not a mode."""
+        return bool(self.enabled and self.public_key and self.secret_key)
 
 class EmbeddingSettings(_GroupSettings):
     """Embedding model. Env prefix: EMBEDDING_  (wired up in Step 8.6)"""
@@ -177,6 +201,7 @@ class Settings(BaseSettings):
     rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)
+    tracing: TracingSettings = Field(default_factory=TracingSettings)
 
     # ------------------------------------------------------------------
     # DEPRECATED flat aliases — kept so existing modules

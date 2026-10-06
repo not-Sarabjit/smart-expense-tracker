@@ -42,6 +42,9 @@ ai = [
     "langchain-qdrant==1.1.0",
     "qdrant-client==1.19.1",
 ]
+tracing = [
+    "langfuse>=3.0.0,<4.0.0",
+]
 embeddings = [
     # Local embedding models. Heavy (pulls torch) — kept out of CI and the default install.
     "sentence-transformers==6.1.0",
