@@ -107,6 +107,7 @@ def income_category_id(client, user_a_headers):
     )
     return response.json()["id"]
 
+
 class FakeGraph:
     """Minimal stand-in for a compiled LangGraph: only `astream` is used."""
 

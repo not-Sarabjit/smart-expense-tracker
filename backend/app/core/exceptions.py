@@ -155,7 +155,6 @@ class ConversationNotFoundException(AppException):
         super().__init__(message, status_code)
 
 
-
 # -------------------------   Rate limiting ----------------------
 
 

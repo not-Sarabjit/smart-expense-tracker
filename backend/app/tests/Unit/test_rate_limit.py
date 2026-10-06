@@ -158,14 +158,14 @@ def limited_client(client, fake_redis, monkeypatch):
     yield client
     app.dependency_overrides.pop(require_ai_enabled, None)
     app.dependency_overrides.pop(get_rate_limiter, None)
-    monkeypatch.undo()          # restore env first...
+    monkeypatch.undo()  # restore env first...
     get_settings.cache_clear()  # ...then rebuild Settings from it
 
 
-def test_send_message_429s_past_the_limit(limited_client, user_a_headers, fake_graph, fake_title_model):
-    created = limited_client.post(
-        "/api/v1/chat/conversations", json={}, headers=user_a_headers
-    )
+def test_send_message_429s_past_the_limit(
+    limited_client, user_a_headers, fake_graph, fake_title_model
+):
+    created = limited_client.post("/api/v1/chat/conversations", json={}, headers=user_a_headers)
     conversation_id = created.json()["id"]
     url = f"/api/v1/chat/conversations/{conversation_id}/messages"
 
@@ -183,7 +183,9 @@ def test_send_message_429s_past_the_limit(limited_client, user_a_headers, fake_g
     assert blocked.headers["RateLimit-Remaining"] == "0"
 
 
-def test_rate_limit_is_per_user(limited_client, user_a_headers, user_b_headers, fake_graph, fake_title_model):
+def test_rate_limit_is_per_user(
+    limited_client, user_a_headers, user_b_headers, fake_graph, fake_title_model
+):
     def send(headers):
         conversation_id = limited_client.post(
             "/api/v1/chat/conversations", json={}, headers=headers
@@ -200,7 +202,9 @@ def test_rate_limit_is_per_user(limited_client, user_a_headers, user_b_headers, 
     assert send(user_b_headers).status_code == 200
 
 
-def test_throttled_request_writes_no_message_row(limited_client, user_a_headers, fake_graph, fake_title_model):
+def test_throttled_request_writes_no_message_row(
+    limited_client, user_a_headers, fake_graph, fake_title_model
+):
     """D18: the limit runs as a dependency, so a 429 costs no DB work."""
     conversation_id = limited_client.post(
         "/api/v1/chat/conversations", json={}, headers=user_a_headers
