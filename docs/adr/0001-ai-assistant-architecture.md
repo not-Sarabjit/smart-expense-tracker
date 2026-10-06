@@ -131,3 +131,7 @@ Chat API (SSE) ─► LangGraph agent loop ─► tool gateway ─► tools ─�
 - Revisit multi-agent subgraphs only if single-agent evals plateau.
 - Record further significant decisions (tracing backend in 2.1, checkpointer vs `messages`
   table as source of truth in 4.1) as ADR 0002+.
+- Rate limiting is hand-rolled (sliding-window log on Redis, `app/core/rate_limit.py`) to keep
+  the ZSET/Lua mechanics visible and reusable for idempotency locks (4.5) and token quotas
+  (11.3). If it grows beyond per-user request counts, swap in the `limits` library — the
+  change is confined to `SlidingWindowRateLimiter`, since callers only see `RateLimitDecision`.
