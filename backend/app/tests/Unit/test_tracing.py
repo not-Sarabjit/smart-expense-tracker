@@ -28,6 +28,7 @@ def _settings(**overrides) -> Settings:
 
 # --- off by default ------------------------------------------------------
 
+
 def test_disabled_by_default():
     assert get_settings().tracing.enabled is False
 
@@ -41,14 +42,15 @@ def test_no_client_when_disabled():
 
 
 def test_flush_is_a_noop_when_disabled():
-    tracing.flush(_settings(enabled=False))      # must not raise
+    tracing.flush(_settings(enabled=False))  # must not raise
 
 
 def test_shutdown_is_a_noop_when_never_started():
-    tracing.shutdown(_settings(enabled=False))   # must not raise
+    tracing.shutdown(_settings(enabled=False))  # must not raise
 
 
 # --- misconfiguration degrades, never raises -----------------------------
+
 
 def test_enabled_without_keys_degrades():
     settings = _settings(enabled=True, public_key=None, secret_key=None)
@@ -74,10 +76,11 @@ def test_failure_is_sticky():
     """A broken config must warn once, not once per chat turn."""
     settings = _settings(enabled=True, public_key=None, secret_key=None)
     assert tracing.get_tracing_client(settings) is None
-    assert tracing.get_tracing_client(settings) is None   # cached failure, no re-attempt
+    assert tracing.get_tracing_client(settings) is None  # cached failure, no re-attempt
 
 
 # --- validation ----------------------------------------------------------
+
 
 def test_sample_rate_is_bounded():
     with pytest.raises(ValueError):
@@ -87,6 +90,7 @@ def test_sample_rate_is_bounded():
 
 
 # --- describe_tracing never leaks the secret -----------------------------
+
 
 def test_describe_omits_secrets():
     settings = _settings(enabled=True, public_key="pk-lf-public", secret_key="sk-lf-SECRET")
@@ -109,6 +113,7 @@ def test_describe_environment_override_wins():
 
 # --- trace_metadata is pure and vendor-key-shaped ------------------------
 
+
 def test_metadata_empty_when_nothing_given():
     assert tracing.trace_metadata() == {}
 
@@ -121,7 +126,7 @@ def test_metadata_maps_domain_values_to_vendor_keys():
         prompt_version="system_v1",
         tags=["chat"],
     )
-    assert md["langfuse_user_id"] == "7"          # stringified
+    assert md["langfuse_user_id"] == "7"  # stringified
     assert md["langfuse_session_id"] == "3f2e...uuid"
     assert md["request_id"] == "req-abc"
     assert md["prompt_version"] == "system_v1"

@@ -8,6 +8,7 @@ Needs TRACING_ENABLED=true plus real keys in backend/.env. Hits the network; nev
 
 from __future__ import annotations
 
+import contextlib
 import sys
 import time
 
@@ -70,10 +71,8 @@ def main() -> int:
             )
             time.sleep(0.05)
             span.update_trace(output={"answer": "yes"})
-            try:
+            with contextlib.suppress(Exception):
                 trace_id = client.get_current_trace_id()
-            except Exception:
-                pass
         print("  span emitted")
     except Exception as exc:
         print(f"  manual span API differs in this SDK version: {type(exc).__name__}: {exc}")
@@ -81,8 +80,10 @@ def main() -> int:
 
     _line("callbacks")
     callbacks = tracing.get_tracing_callbacks(settings)
-    print(f"  get_tracing_callbacks() -> {len(callbacks)} handler(s): "
-          f"{[type(c).__name__ for c in callbacks]}")
+    print(
+        f"  get_tracing_callbacks() -> {len(callbacks)} handler(s): "
+        f"{[type(c).__name__ for c in callbacks]}"
+    )
     if not callbacks:
         print("  No handler built -- 2.2 would silently trace nothing. Check warnings above.")
         return 1
