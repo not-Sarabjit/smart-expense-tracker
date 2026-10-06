@@ -17,6 +17,7 @@ from app.ai.agent.titler import generate_title
 from app.api.sse import SSE_HEADERS, SSEEvent, format_sse
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
+from app.core.rate_limit import RateLimitDecision
 from app.core.request_context import get_request_id
 from app.database.session import get_db
 from app.database.unit_of_work import UnitOfWork
@@ -24,6 +25,7 @@ from app.dependencies.agent import get_agent_graph
 from app.dependencies.auth import get_current_user
 from app.dependencies.features import require_ai_enabled
 from app.dependencies.llm import get_title_llm
+from app.dependencies.rate_limit import rate_limit_chat_message
 from app.models.message import MessageRole
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
@@ -159,7 +161,10 @@ def list_messages(
 @router.post(
     "/conversations/{conversation_id}/messages",
     status_code=status.HTTP_200_OK,
-    responses={200: {"content": {"text/event-stream": {}}, "description": "SSE stream"}},
+    responses={
+        200: {"content": {"text/event-stream": {}}, "description": "SSE stream"},
+        429: {"description": "Rate limit exceeded"},
+    },
     response_model=None,
 )
 async def send_message(
@@ -170,6 +175,7 @@ async def send_message(
     graph: Runnable = Depends(get_agent_graph),
     title_llm: BaseChatModel = Depends(get_title_llm),
     settings: Settings = Depends(get_settings),
+    rate_limit: RateLimitDecision = Depends(rate_limit_chat_message),
 ) -> StreamingResponse:
     """Send a message and stream the assistant's reply as Server-Sent Events.
 
@@ -178,8 +184,10 @@ async def send_message(
     the whole event loop.
 
     Two phases:
-      1. Pre-flight, before any bytes are sent: ownership check (404), history
-         load, persist the user's message. Failures here are normal HTTP errors.
+      1. Pre-flight, before any bytes are sent: rate limit (429), ownership check
+         (404), history load, persist the user's message. Failures here are
+         normal HTTP errors. The rate limit runs first, as a dependency, so a
+         throttled request costs no DB work and writes no message row.
       2. The stream. The status line is already gone, so failures from here on
          are reported as an `error` event inside the stream.
     """
@@ -327,5 +335,7 @@ async def send_message(
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
-        headers=SSE_HEADERS,
+        # FastAPI does not merge dependency-set headers into a Response the handler
+        # returns itself, so the rate-limit budget is attached explicitly here.
+        headers={**SSE_HEADERS, **rate_limit.as_headers()},
     )

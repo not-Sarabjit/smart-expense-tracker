@@ -106,12 +106,35 @@ class EmbeddingSettings(_GroupSettings):
 
 
 class RedisSettings(_GroupSettings):
-    """Redis. Env prefix: REDIS_  (wired up in Step 1.7)"""
+    """Redis connection. Env prefix: REDIS_  (wired up in Step 1.7)
+
+    The socket timeouts are deliberately tiny. The rate limiter fails *open* when
+    Redis is unreachable, which is only acceptable if "unreachable" is discovered
+    in milliseconds — a default 30s timeout would stall every chat request behind
+    a dead Redis and turn a cache outage into a product outage.
+    """
 
     model_config = SettingsConfigDict(env_prefix="REDIS_")
 
     url: str = "redis://localhost:6379/0"
     max_connections: int = 20
+    socket_timeout_seconds: float = 0.25
+    socket_connect_timeout_seconds: float = 0.25
+
+
+class RateLimitSettings(_GroupSettings):
+    """Per-user request limits. Env prefix: RATE_LIMIT_  (Step 1.7)
+
+    Only the chat *send* route is limited — reads and conversation CRUD are cheap.
+    Defaults to enabled: unlike AI_ENABLED (a feature flag, fail-safe off), a limit
+    is a protection, so a missing env var must not silently remove it.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="RATE_LIMIT_")
+
+    enabled: bool = True
+    chat_messages: int = 20
+    chat_window_seconds: int = 60
 
 
 class QdrantSettings(_GroupSettings):
@@ -151,6 +174,7 @@ class Settings(BaseSettings):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     embeddings: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
+    rate_limit: RateLimitSettings = Field(default_factory=RateLimitSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)
 

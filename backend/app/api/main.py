@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -8,6 +10,7 @@ from app.api import auth, category, chat, transaction, users
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppException
 from app.core.logging import get_logger, setup_logging
+from app.core.redis import close_redis_client
 from app.core.request_context import REQUEST_ID_HEADER, get_request_id
 from app.middleware.logging_middleware import RequestLoggingMiddleware
 
@@ -16,14 +19,21 @@ setup_logging(level=get_settings().app.log_level, json_logs=get_settings().app.l
 logger = get_logger(__name__)
 
 
-# inside the lifespan, before `yield`:
-if get_settings().ai.enabled:
-    get_compiled_graph()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown. Code before `yield` runs once at boot, after it at exit."""
+    if get_settings().ai.enabled:
+        # Compile the graph now so the first chat request doesn't pay for it.
+        get_compiled_graph()
+    yield
+    # Redis is created lazily on first use, so this is a no-op if nothing used it.
+    await close_redis_client()
 
 
 app = FastAPI(
     title="Expense Tracker API",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # List of browser origins allowed to use backend
@@ -40,7 +50,14 @@ app.add_middleware(
     allow_methods=["*"],  # GET, POST, PUT, DELETE, etc.
     allow_headers=["*"],  # Authorization, Content-Type, etc.
     # let the browser read the pagination total and the correlation id
-    expose_headers=["X-Total-Count", REQUEST_ID_HEADER],
+    expose_headers=[
+        "X-Total-Count",
+        REQUEST_ID_HEADER,
+        "RateLimit-Limit",
+        "RateLimit-Remaining",
+        "RateLimit-Reset",
+        "Retry-After",
+    ],
 )
 
 # Request id + access log middleware (added last = outermost, so it wraps CORS too)
@@ -59,6 +76,8 @@ async def app_exception_handler(request: Request, exc: AppException):
             "message": exc.message,
             "status_code": exc.status_code,
         },
+        # e.g. Retry-After + RateLimit-* on a 429. None for every other exception.
+        headers=exc.headers or None,
     )
 
 

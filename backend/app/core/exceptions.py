@@ -1,9 +1,22 @@
 class AppException(Exception):
-    """Base class for all custom application exceptions."""
+    """Base class for all custom application exceptions.
 
-    def __init__(self, message: str, status_code: int = 400):
+    `headers` lets an exception carry response headers (e.g. `Retry-After` on a
+    429). The global handler in `api/main.py` applies them. Without this the only
+    way to set a header on an error would be `HTTPException`, which renders
+    FastAPI's `{"detail": ...}` body instead of ours and would make 429 the one
+    endpoint with a different error shape.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int = 400,
+        headers: dict[str, str] | None = None,
+    ):
         self.message = message
         self.status_code = status_code
+        self.headers = headers
         super().__init__(message)
 
 
@@ -140,3 +153,23 @@ class ConversationNotFoundException(AppException):
 
     def __init__(self, message: str = "Conversation not found", status_code: int = 404):
         super().__init__(message, status_code)
+
+
+
+# -------------------------   Rate limiting ----------------------
+
+
+class RateLimitExceededException(AppException):
+    """Raised when a user exceeds the per-window request limit for a route.
+
+    429 is the correct code: the request was valid and authenticated, the client
+    simply has to slow down. `Retry-After` tells it exactly how long.
+    """
+
+    def __init__(
+        self,
+        message: str = "Too many messages. Please wait a moment before sending another.",
+        status_code: int = 429,
+        headers: dict[str, str] | None = None,
+    ):
+        super().__init__(message, status_code, headers)
